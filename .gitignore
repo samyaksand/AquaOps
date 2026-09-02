@@ -43,3 +43,6 @@ build/
 # Misc
 *.tmp
 *.bak
+
+# Claude project instructions (local only)
+CLAUDE.md
