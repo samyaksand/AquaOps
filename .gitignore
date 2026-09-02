@@ -17,12 +17,28 @@ Thumbs.db
 # Dependencies
 node_modules/
 venv/
+.venv/
+env/
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
 
 # Build output
 dist/
 build/
+*.local
+
+# Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg
+.Python
+
+# Env files
+.env.*.local
+!.env.example
 
 # Misc
 *.tmp
