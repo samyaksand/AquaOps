@@ -17,6 +17,7 @@ from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.events.schemas import EventEnvelope
 from app.events.topics import Topic
+from app.observability import KAFKA_EVENTS_PUBLISHED
 
 logger = get_logger(__name__)
 
@@ -74,6 +75,8 @@ class EventProducer:
         """Publish one event. Returns whether it was actually sent."""
         producer = await self._get_producer()
         if producer is None:
+            outcome = "disabled" if not self._settings.kafka_enabled else "failed"
+            KAFKA_EVENTS_PUBLISHED.labels(topic=topic.value, outcome=outcome).inc()
             return False
         try:
             await producer.send_and_wait(
@@ -81,7 +84,9 @@ class EventProducer:
             )
         except KafkaError:
             logger.warning("failed to publish to topic %s", topic.value, exc_info=True)
+            KAFKA_EVENTS_PUBLISHED.labels(topic=topic.value, outcome="failed").inc()
             return False
+        KAFKA_EVENTS_PUBLISHED.labels(topic=topic.value, outcome="sent").inc()
         return True
 
     async def close(self) -> None:

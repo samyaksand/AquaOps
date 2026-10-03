@@ -1,0 +1,99 @@
+# Default values for the aquaops chart. Mirrors infrastructure/kubernetes/'s
+# raw manifests structurally — same Service names, same env var names — so
+# either can be used interchangeably against the same backend/frontend images.
+
+namespace: aquaops
+
+backend:
+  image:
+    repository: aquaops-backend
+    tag: v2
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8000
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+worker:
+  # Reuses backend.image — same dependencies, different command — so only
+  # the replica count and resources are configured separately.
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 250m, memory: 256Mi }
+  metricsPort: 9100
+
+frontend:
+  image:
+    repository: aquaops-frontend
+    tag: local
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8080
+  service:
+    type: NodePort
+    nodePort: 30080
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 250m, memory: 128Mi }
+
+postgres:
+  image: postgis/postgis:16-3.4
+  port: 5432
+  storage: 2Gi
+  storageClassName: ""  # empty uses the cluster default
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+redis:
+  image: redis:7-alpine
+  port: 6379
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 250m, memory: 128Mi }
+
+kafka:
+  image: apache/kafka:3.8.0
+  port: 9092
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { cpu: 1, memory: 1Gi }
+
+# Non-secret application config. Keys match app/core/config.py's Settings
+# field names (env lookup is case-insensitive) — passed through as-is to
+# ConfigMap data, so adding a new backend setting only means adding a key
+# here, no template change.
+config:
+  ENVIRONMENT: "kubernetes"
+  DEBUG: "false"
+  CORS_ORIGINS: '["http://localhost:8080","http://aquaops-frontend:8080"]'
+  KAFKA_ENABLED: "true"
+  POSTGRES_DB: "aquaops"
+  POSTGRES_USER: "aquaops"
+
+# Local-development credential only, matching docker-compose.yml. Replace
+# before any non-local use — see secret.yaml's own comment.
+secrets:
+  postgresPassword: "aquaops"
+
+observability:
+  enabled: true
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    port: 9090
+    retention: 2h
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits: { cpu: 250m, memory: 256Mi }
+  grafana:
+    image: grafana/grafana:11.3.1
+    port: 3000
+    adminPassword: "aquaops"
+    service:
+      type: NodePort
+      nodePort: 30300
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits: { cpu: 250m, memory: 256Mi }

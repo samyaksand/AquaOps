@@ -7,6 +7,7 @@ from app.events.publish import (
     publish_scenario_allocation_computed,
     publish_scenario_applied,
 )
+from app.observability import time_allocation
 from app.schemas.allocation import (
     AllocationResultOut,
     ScenarioAllocateRequest,
@@ -49,7 +50,8 @@ async def apply_and_allocate(
 ) -> ScenarioAllocationOut:
     """Apply a scenario and allocate the network it produces."""
     scenario = request.scenario.to_domain()
-    disrupted, result = allocate_scenario(state, scenario, request.strategy)
+    with time_allocation(strategy=request.strategy.value, source="http"):
+        disrupted, result = allocate_scenario(state, scenario, request.strategy)
     summary = ScenarioSummaryOut.from_domain(scenario)
     network_out = NetworkStateOut.from_domain(disrupted)
     allocation_out = AllocationResultOut.from_domain(result)

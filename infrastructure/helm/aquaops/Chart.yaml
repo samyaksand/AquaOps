@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aquaops
+description: AquaOps water resource allocation platform — frontend, backend, worker, Postgres/PostGIS, Redis, Kafka.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

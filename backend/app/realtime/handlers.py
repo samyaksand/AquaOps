@@ -18,6 +18,7 @@ from app.events.publish import (
     publish_scenario_allocation_computed,
     publish_scenario_applied,
 )
+from app.observability import WS_EVENTS, time_allocation
 from app.realtime.manager import ConnectionManager
 from app.schemas.allocation import AllocationResultOut
 from app.schemas.network import NetworkStateOut
@@ -103,6 +104,7 @@ async def handle_frame(
         await manager.broadcast(event)
     else:
         await manager.send(client_id, event)
+    WS_EVENTS.labels(event_type=event.type, path="direct").inc()
 
 
 async def _dispatch(command, provider):
@@ -116,7 +118,8 @@ async def _dispatch(command, provider):
 
     if isinstance(command, AllocateCommand):
         state = await provider()
-        result = allocate_network(state, command.strategy)
+        with time_allocation(strategy=command.strategy.value, source="websocket"):
+            result = allocate_network(state, command.strategy)
         out = AllocationResultOut.from_domain(result)
         publish_allocation_computed(out)
         return AllocationEvent(allocation=out)
@@ -133,9 +136,10 @@ async def _dispatch(command, provider):
     if isinstance(command, ScenarioAllocateCommand):
         state = await provider()
         scenario = command.scenario.to_domain()
-        disrupted, result = allocate_scenario(
-            state, scenario, command.strategy
-        )
+        with time_allocation(strategy=command.strategy.value, source="websocket"):
+            disrupted, result = allocate_scenario(
+                state, scenario, command.strategy
+            )
         summary = ScenarioSummaryOut.from_domain(scenario)
         network_out = NetworkStateOut.from_domain(disrupted)
         allocation_out = AllocationResultOut.from_domain(result)

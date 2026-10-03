@@ -1,0 +1,126 @@
+{{- if .Values.observability.enabled }}
+# Scrapes any pod in this namespace carrying prometheus.io/scrape: "true"
+# (set on the backend and worker pods) via Kubernetes service discovery —
+# no per-service scrape-config entry needed when a new instrumented
+# component is added, just the annotation.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aquaops-prometheus-config
+  namespace: {{ .Values.namespace }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 10s
+    scrape_configs:
+      - job_name: aquaops-pods
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: ["{{ .Values.namespace }}"]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aquaops-prometheus
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aquaops-prometheus
+  template:
+    metadata:
+      labels:
+        app: aquaops-prometheus
+        {{- include "aquaops.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: aquaops-prometheus
+      containers:
+        - name: prometheus
+          image: {{ .Values.observability.prometheus.image }}
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.retention.time={{ .Values.observability.prometheus.retention }}
+          ports:
+            - containerPort: {{ .Values.observability.prometheus.port }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: {{ .Values.observability.prometheus.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: {{ .Values.observability.prometheus.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.observability.prometheus.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: aquaops-prometheus-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aquaops-prometheus
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: aquaops-prometheus
+  ports:
+    - port: {{ .Values.observability.prometheus.port }}
+      targetPort: {{ .Values.observability.prometheus.port }}
+---
+# Prometheus's Kubernetes service discovery needs to list/watch pods.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aquaops-prometheus
+  namespace: {{ .Values.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aquaops-prometheus
+  namespace: {{ .Values.namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aquaops-prometheus
+  namespace: {{ .Values.namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: aquaops-prometheus
+    namespace: {{ .Values.namespace }}
+roleRef:
+  kind: Role
+  name: aquaops-prometheus
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

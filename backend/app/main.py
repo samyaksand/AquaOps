@@ -7,13 +7,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api.routes import router as api_router
 from app.cache.redis_client import close_redis
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
+from app.db.session import engine
 from app.domain.scenario import ScenarioError
 from app.events.producer import get_event_producer
+from app.observability.tracing import configure_tracing
 from app.realtime.manager import get_connection_manager
 
 settings = get_settings()
@@ -67,3 +70,10 @@ async def handle_scenario_error(
 
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+# HTTP request count/latency and process CPU/memory, auto-instrumented.
+# AquaOps-specific metrics (allocation timing, WebSocket, Kafka/Redis) live
+# in app/observability/metrics.py and are recorded from call sites.
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
+configure_tracing(app, engine=engine)

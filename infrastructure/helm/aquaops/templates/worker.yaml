@@ -1,0 +1,53 @@
+# Standalone Kafka -> Redis relay (app/worker.py). Reuses the backend
+# image with a different command; no client-facing Service, but it does
+# expose its own /metrics port for Prometheus (see app/worker.py).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aquaops-worker
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      app: aquaops-worker
+  template:
+    metadata:
+      labels:
+        app: aquaops-worker
+        {{- include "aquaops.labels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.worker.metricsPort }}"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: worker
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command: ["python", "-m", "app.worker"]
+          ports:
+            - containerPort: {{ .Values.worker.metricsPort }}
+          envFrom:
+            - configMapRef:
+                name: aquaops-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aquaops-secrets
+                  key: POSTGRES_PASSWORD
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aquaops-worker-metrics
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: aquaops-worker
+  ports:
+    - port: {{ .Values.worker.metricsPort }}
+      targetPort: {{ .Values.worker.metricsPort }}

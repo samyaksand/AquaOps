@@ -1,0 +1,15 @@
+# Non-secret configuration. See infrastructure/kubernetes/configmap.yaml for
+# the same values hand-written; this adds the Service-DNS-derived settings
+# that depend on .Values.namespace staying in sync with the Service names.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aquaops-config
+  namespace: {{ .Values.namespace }}
+data:
+  {{- range $key, $value := .Values.config }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  DATABASE_URL: "postgresql+asyncpg://{{ .Values.config.POSTGRES_USER }}:{{ .Values.secrets.postgresPassword }}@aquaops-postgres:{{ .Values.postgres.port }}/{{ .Values.config.POSTGRES_DB }}"
+  REDIS_URL: "redis://aquaops-redis:{{ .Values.redis.port }}/0"
+  KAFKA_BOOTSTRAP_SERVERS: "aquaops-kafka:{{ .Values.kafka.port }}"

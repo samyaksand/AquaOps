@@ -12,6 +12,7 @@ from redis.exceptions import RedisError
 from app.cache.redis_client import get_redis
 from app.cache.state_cache import PUBSUB_CHANNEL
 from app.core.logging import get_logger
+from app.observability import WS_CONNECTIONS, WS_EVENTS
 
 logger = get_logger(__name__)
 
@@ -45,6 +46,7 @@ class ConnectionManager:
             self._sequence += 1
             client_id = f"client-{self._sequence}"
             self._clients[client_id] = websocket
+        WS_CONNECTIONS.set(self.client_count)
         logger.info("websocket %s connected (%d live)", client_id, self.client_count)
         return client_id
 
@@ -53,6 +55,7 @@ class ConnectionManager:
         async with self._lock:
             existed = self._clients.pop(client_id, None) is not None
         if existed:
+            WS_CONNECTIONS.set(self.client_count)
             logger.info(
                 "websocket %s disconnected (%d live)", client_id, self.client_count
             )
@@ -148,7 +151,11 @@ class ConnectionManager:
                 except (TypeError, ValueError):
                     logger.warning("dropping malformed pub/sub message")
                     continue
-                await self.broadcast_raw(_envelope_to_client_event(payload))
+                event = _envelope_to_client_event(payload)
+                await self.broadcast_raw(event)
+                WS_EVENTS.labels(
+                    event_type=event.get("type", "unknown"), path="redis_relay"
+                ).inc()
         except RedisError:
             logger.warning("redis pub/sub listener failed", exc_info=True)
         finally:

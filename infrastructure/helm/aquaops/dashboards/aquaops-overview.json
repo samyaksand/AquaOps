@@ -1,0 +1,164 @@
+{
+  "title": "AquaOps Overview",
+  "uid": "aquaops-overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Allocation computation time (p50 / p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(aquaops_allocation_duration_seconds_bucket[5m])) by (le, strategy))",
+          "legendFormat": "p50 {{strategy}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(aquaops_allocation_duration_seconds_bucket[5m])) by (le, strategy))",
+          "legendFormat": "p95 {{strategy}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Allocations per minute, by strategy",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(aquaops_allocation_duration_seconds_count[1m])) by (strategy, source) * 60",
+          "legendFormat": "{{strategy}} ({{source}})"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "API request rate, by endpoint",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=\"aquaops-pods\",app=\"aquaops-backend\"}[5m])) by (handler, status)",
+          "legendFormat": "{{handler}} [{{status}}]"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "API request latency (p95), by endpoint",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"aquaops-pods\",app=\"aquaops-backend\"}[5m])) by (le, handler))",
+          "legendFormat": "{{handler}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "WebSocket connections (current)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "sum(aquaops_websocket_connections)" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "WebSocket events per minute, by type and path",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 18, "x": 6, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(aquaops_websocket_events_total[1m])) by (event_type, path) * 60",
+          "legendFormat": "{{event_type}} ({{path}})"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Kafka events published per minute, by topic/outcome",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 22 },
+      "targets": [
+        {
+          "expr": "sum(rate(aquaops_kafka_events_published_total[1m])) by (topic, outcome) * 60",
+          "legendFormat": "{{topic}} ({{outcome}})"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Kafka events consumed per minute (worker)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 22 },
+      "targets": [
+        {
+          "expr": "sum(rate(aquaops_kafka_events_consumed_total[1m])) by (topic) * 60",
+          "legendFormat": "{{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Redis operations per minute",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 22 },
+      "targets": [
+        {
+          "expr": "sum(rate(aquaops_redis_operations_total[1m])) by (operation, outcome) * 60",
+          "legendFormat": "{{operation}} ({{outcome}})"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Backend health (up)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 29 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ]
+        }
+      },
+      "targets": [
+        { "expr": "min(up{job=\"aquaops-pods\",app=\"aquaops-backend\"})" }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Process CPU usage (backend + worker)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 9, "x": 6, "y": 29 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(rate(process_cpu_seconds_total{job=\"aquaops-pods\"}[5m])) by (app)",
+          "legendFormat": "{{app}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Process memory (RSS)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 9, "x": 15, "y": 29 },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(process_resident_memory_bytes{job=\"aquaops-pods\"}) by (app)",
+          "legendFormat": "{{app}}"
+        }
+      ]
+    }
+  ]
+}

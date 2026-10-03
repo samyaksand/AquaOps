@@ -1,0 +1,80 @@
+# FastAPI app (HTTP + WebSocket). An initContainer runs the Alembic
+# migration and the deterministic, rerunnable seed before the app starts —
+# both are idempotent, so this is safe on every pod (re)start.
+# Pod annotations let Prometheus's own Kubernetes service discovery find
+# /metrics without a separate scrape-config entry per service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aquaops-backend
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      app: aquaops-backend
+  template:
+    metadata:
+      labels:
+        app: aquaops-backend
+        {{- include "aquaops.labels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.backend.port }}"
+        prometheus.io/path: "/metrics"
+    spec:
+      initContainers:
+        - name: migrate-and-seed
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command: ["sh", "-c", "alembic upgrade head && python -m app.db.seed"]
+          envFrom:
+            - configMapRef:
+                name: aquaops-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aquaops-secrets
+                  key: POSTGRES_PASSWORD
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.backend.port }}
+          envFrom:
+            - configMapRef:
+                name: aquaops-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aquaops-secrets
+                  key: POSTGRES_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aquaops-backend
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: aquaops-backend
+  ports:
+    - port: {{ .Values.backend.port }}
+      targetPort: {{ .Values.backend.port }}

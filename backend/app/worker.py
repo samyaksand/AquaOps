@@ -14,13 +14,20 @@ from __future__ import annotations
 
 import asyncio
 
+from prometheus_client import start_http_server
+
 from app.cache.redis_client import close_redis
 from app.cache.state_cache import get_state_cache
 from app.core.logging import configure_logging, get_logger
 from app.events.consumer import EventConsumer
 from app.events.topics import Topic
+from app.observability import KAFKA_EVENTS_CONSUMED, REDIS_OPERATIONS
 
 logger = get_logger(__name__)
+
+# The worker has no HTTP app of its own, so it runs a standalone Prometheus
+# exposition server rather than sharing FastAPI's /metrics mount.
+METRICS_PORT = 9100
 
 CONSUMED_TOPICS = (
     Topic.ALLOCATION_COMPUTED,
@@ -31,6 +38,9 @@ CONSUMED_TOPICS = (
 
 async def run() -> None:
     configure_logging()
+    start_http_server(METRICS_PORT)
+    logger.info("metrics exposed on :%d/metrics", METRICS_PORT)
+
     consumer = EventConsumer(CONSUMED_TOPICS, group_id="aquaops-state-worker")
     cache = get_state_cache()
 
@@ -50,11 +60,26 @@ async def _handle(envelope, cache) -> None:
 
     if payload.type == "allocation_computed":
         await cache.set_latest_allocation(raw)
+        REDIS_OPERATIONS.labels(operation="set", outcome="ok").inc()
     elif payload.type in ("scenario_applied", "scenario_allocation_computed"):
         await cache.set_latest_scenario_allocation(raw)
+        REDIS_OPERATIONS.labels(operation="set", outcome="ok").inc()
 
     await cache.publish(raw)
+    REDIS_OPERATIONS.labels(operation="publish", outcome="ok").inc()
+
+    topic = _TOPIC_BY_EVENT_TYPE.get(payload.type)
+    if topic is not None:
+        KAFKA_EVENTS_CONSUMED.labels(topic=topic.value).inc()
+
     logger.info("relayed %s (event_id=%s)", payload.type, envelope.event_id)
+
+
+_TOPIC_BY_EVENT_TYPE = {
+    "allocation_computed": Topic.ALLOCATION_COMPUTED,
+    "scenario_applied": Topic.SCENARIO_APPLIED,
+    "scenario_allocation_computed": Topic.SCENARIO_ALLOCATION_COMPUTED,
+}
 
 
 def main() -> None:
