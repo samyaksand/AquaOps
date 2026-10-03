@@ -1,0 +1,79 @@
+# FastAPI app (HTTP + WebSocket). An initContainer runs the Alembic
+# migration and the deterministic, rerunnable seed before the app starts —
+# both are idempotent, so this is safe on every pod (re)start and needs no
+# separate Job to sequence against.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aquaops-backend
+  namespace: aquaops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aquaops-backend
+  template:
+    metadata:
+      labels:
+        app: aquaops-backend
+    spec:
+      initContainers:
+        - name: migrate-and-seed
+          image: aquaops-backend:v1
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "alembic upgrade head && python -m app.db.seed"]
+          envFrom:
+            - configMapRef:
+                name: aquaops-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aquaops-secrets
+                  key: POSTGRES_PASSWORD
+      containers:
+        - name: backend
+          image: aquaops-backend:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: aquaops-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aquaops-secrets
+                  key: POSTGRES_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aquaops-backend
+  namespace: aquaops
+spec:
+  selector:
+    app: aquaops-backend
+  ports:
+    - port: 8000
+      targetPort: 8000

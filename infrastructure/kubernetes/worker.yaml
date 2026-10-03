@@ -1,0 +1,42 @@
+# Standalone Kafka -> Redis relay (app/worker.py). Same image as the
+# backend, different command; no Service, since nothing addresses it
+# directly — it only consumes from Kafka and writes to Redis.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aquaops-worker
+  namespace: aquaops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aquaops-worker
+  template:
+    metadata:
+      labels:
+        app: aquaops-worker
+    spec:
+      containers:
+        - name: worker
+          image: aquaops-backend:v1
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "app.worker"]
+          envFrom:
+            - configMapRef:
+                name: aquaops-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aquaops-secrets
+                  key: POSTGRES_PASSWORD
+          # No HTTP surface to probe; liveness is inferred from the process
+          # itself staying up, same as the worker has no supervisor in
+          # Docker Compose either.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

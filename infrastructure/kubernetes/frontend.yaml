@@ -1,0 +1,56 @@
+# Static SPA served by nginx, which also reverse-proxies /api (including
+# WebSocket upgrades) to the backend Service — see frontend/nginx.conf.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aquaops-frontend
+  namespace: aquaops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aquaops-frontend
+  template:
+    metadata:
+      labels:
+        app: aquaops-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: aquaops-frontend:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aquaops-frontend
+  namespace: aquaops
+spec:
+  type: NodePort
+  selector:
+    app: aquaops-frontend
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
