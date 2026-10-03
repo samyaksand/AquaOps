@@ -1,0 +1,94 @@
+import { Building2, Factory, Hospital, Map, Truck, Waves } from 'lucide-react'
+
+import { NetworkMap } from '@/components/map/NetworkMap'
+import { KIND_COLORS } from '@/components/map/glyphs'
+import { Badge } from '@/components/ui/Badge'
+import type { NetworkState } from '@/types/network'
+
+interface MapWorkspaceProps {
+  network: NetworkState | null
+  loading: boolean
+  error: string | null
+  onRetry: () => void
+}
+
+/** Chrome around the interactive network map: title bar and type legend. */
+export function MapWorkspace({
+  network,
+  loading,
+  error,
+  onRetry,
+}: MapWorkspaceProps) {
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-hairline bg-surface">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <Map className="size-4 text-aqua-400" aria-hidden="true" />
+          <h2 className="text-sm font-semibold text-ink">Network Map</h2>
+          <Badge tone="neutral">Rivertown</Badge>
+        </div>
+        {network ? (
+          <span className="tabular hidden text-[11px] text-ink-subtle sm:block">
+            {network.sources.length +
+              network.transits.length +
+              network.demands.length}{' '}
+            nodes · {network.links.length} pipelines
+          </span>
+        ) : null}
+      </div>
+
+      <div className="relative min-h-0 flex-1">
+        <NetworkMap
+          network={network}
+          loading={loading}
+          error={error}
+          onRetry={onRetry}
+        />
+      </div>
+
+      <Legend network={network} />
+    </div>
+  )
+}
+
+const ENTRIES = [
+  { kind: 'reservoir', icon: Waves, label: 'Reservoir' },
+  { kind: 'plant', icon: Factory, label: 'Plant' },
+  { kind: 'zone', icon: Building2, label: 'Demand zone' },
+  { kind: 'facility', icon: Hospital, label: 'Critical facility' },
+  { kind: 'tanker', icon: Truck, label: 'Tanker' },
+] as const
+
+function Legend({ network }: { network: NetworkState | null }) {
+  const counts: Record<string, number> = network
+    ? {
+        reservoir: network.sources.length,
+        plant: network.transits.length,
+        zone: network.demands.filter((item) => item.kind === 'zone').length,
+        facility: network.demands.filter((item) => item.kind === 'facility')
+          .length,
+        tanker: network.tankers.length,
+      }
+    : {}
+
+  return (
+    <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 border-t border-hairline px-4 py-2.5">
+      {ENTRIES.map(({ kind, icon: Icon, label }) => (
+        <div key={kind} className="flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className="size-2 rounded-sm"
+            style={{ backgroundColor: KIND_COLORS[kind] }}
+          />
+          <Icon className="size-3.5 text-ink-subtle" aria-hidden="true" />
+          <span className="text-xs text-ink-muted">{label}</span>
+          {network ? (
+            <span className="tabular text-xs font-semibold text-ink">
+              {counts[kind]}
+            </span>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  )
+}

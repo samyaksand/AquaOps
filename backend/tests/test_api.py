@@ -585,3 +585,36 @@ async def test_endpoints_work_against_the_seeded_database():
         pytest.skip(f"local PostgreSQL unavailable: {exc}")
     finally:
         await engine.dispose()
+
+
+# -- geography ----------------------------------------------------------------
+
+
+async def test_geography_returns_coordinates_for_the_seeded_network():
+    """Presentation-only endpoint; skipped when PostgreSQL is unavailable."""
+    from app.db.session import engine
+
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as c:
+            response = await c.get(f"{PREFIX}/network/geography")
+            if response.status_code != 200:
+                pytest.skip("local PostgreSQL unavailable")
+
+            body = response.json()
+            assert len(body["nodes"]) == 13
+            assert len(body["tankers"]) == 3
+
+            downtown = body["nodes"]["DZ-DOWNTOWN"]
+            assert downtown["longitude"] == pytest.approx(-97.743)
+            assert downtown["latitude"] == pytest.approx(30.267)
+
+            for position in body["nodes"].values():
+                assert -180 <= position["longitude"] <= 180
+                assert -90 <= position["latitude"] <= 90
+    except (SQLAlchemyError, OSError) as exc:
+        pytest.skip(f"local PostgreSQL unavailable: {exc}")
+    finally:
+        await engine.dispose()

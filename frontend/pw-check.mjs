@@ -1,0 +1,15 @@
+import { chromium } from 'playwright'
+const b = await chromium.launch()
+const p = await b.newPage({ viewport: { width: 1600, height: 950 } })
+const errors = [], warns = []
+p.on('console', m => { if (m.type()==='error') errors.push(m.text()); if (m.type()==='warning') warns.push(m.text()) })
+p.on('pageerror', e => errors.push('PAGEERROR: ' + e.message))
+await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' })
+await p.waitForTimeout(1200)
+await p.screenshot({ path: 'C:/Users/DELL/Desktop/AquaOps/.shots/01-initial.png' })
+console.log('nodes (g with translate):', await p.locator('svg[role="img"] g[transform^="translate"]').count())
+console.log('pipelines (line):', await p.locator('svg[role="img"] line').count())
+console.log('labels (text):', await p.locator('svg[role="img"] text').count())
+console.log('--- console errors ---'); errors.forEach(e=>console.log(' ', e))
+console.log('--- console warnings ---'); warns.slice(0,8).forEach(e=>console.log(' ', e))
+await b.close()
