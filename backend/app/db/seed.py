@@ -108,7 +108,12 @@ RESERVOIRS = [
             capacity_m3=Decimal("3500000.000"),
             current_volume_m3=Decimal("1200000.000"),
             dead_storage_m3=Decimal("250000.000"),
-            max_withdrawal_m3_per_day=Decimal("40000.000"),
+            # 68,000 (34,000 after the engine's degraded-state derate) covers
+            # the Bravo branch's combined minimum demand (28,080 m3/day)
+            # with headroom left over, so allocation strategies compete over
+            # a real remainder pool on this branch instead of all converging
+            # on "nobody's minimum is fully met" — see docs/strategy-differentiation.md.
+            max_withdrawal_m3_per_day=Decimal("68000.000"),
             inflow_m3_per_day=Decimal("12000.000"),
             water_quality=WaterQuality.RAW,
         ),
@@ -334,7 +339,14 @@ PIPELINES = [
         "TP-BRAVO",
         dict(
             name="East Basin to Bravo Trunk",
-            capacity_m3_per_day=Decimal("38000.000"),
+            # Raised alongside RES-EAST's withdrawal rate (see that reservoir's
+            # comment) so the pipeline isn't a tighter bottleneck than the
+            # reservoir it carries — both represent the same degraded-but-not-
+            # catastrophic trunk-line disruption. Derated capacity (x0.5) is
+            # 34,000, matching the reservoir's derated yield, comfortably
+            # covering the Bravo branch's 28,080 m3/day minimum demand with a
+            # real remainder pool for strategies to compete over.
+            capacity_m3_per_day=Decimal("68000.000"),
             current_flow_m3_per_day=Decimal("18000.000"),
             loss_ratio=Decimal("0.0400"),
             length_m=Decimal("9800.00"),

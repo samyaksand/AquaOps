@@ -1,0 +1,158 @@
+# AquaOps — production Docker Compose.
+#
+# Runs on a single small VPS (sized for 2 vCPU / 4 GB RAM). PostgreSQL/PostGIS
+# is NOT run here — Supabase is the production database, reached over
+# DATABASE_URL like any other Postgres. Redis and Kafka still run on the VM:
+# both are best-effort infrastructure the backend already degrades without
+# (see backend/app/core/config.py / CLAUDE.md "Events & Cache"), so there is
+# no managed-service dependency to introduce for them.
+#
+# All credentials/URLs come from an external env file passed with --env-file
+# (see infrastructure/docker/PRODUCTION.md) — nothing here is hardcoded.
+#
+# Frontend/nginx is the single public origin: it serves the built SPA and
+# reverse-proxies /api/ (including the /api/v1/ws WebSocket upgrade) to the
+# backend, so Cloudflare only ever needs to point at one origin/port
+# (frontend:8080). This mirrors frontend/nginx.conf and the Kubernetes
+# frontend Service, unchanged from the existing dev Compose/K8s setup.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: aquaops-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aquaops
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192M
+
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: aquaops-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:19092,CONTROLLER://0.0.0.0:19093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:19093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # No EXTERNAL listener: unlike the dev compose, nothing outside this
+      # network ever needs to reach Kafka directly in production.
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:19092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - aquaops
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 1024M
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: aquaops-backend:production
+    container_name: aquaops-backend
+    restart: unless-stopped
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file:
+      - ../../backend/.env.production
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - aquaops
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 768M
+
+  worker:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: aquaops-backend:production
+    container_name: aquaops-worker
+    restart: unless-stopped
+    command: ["python", "-m", "app.worker"]
+    env_file:
+      - ../../backend/.env.production
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    # No HTTP surface to probe (see infrastructure/kubernetes/worker.yaml) —
+    # restart: unless-stopped plus Docker's own process liveness covers it.
+    networks:
+      - aquaops
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+      args:
+        # Both are optional — left unset, the SPA calls relative /api paths
+        # and nginx below reverse-proxies them to the backend container on
+        # this same origin, which is the default and recommended setup
+        # behind a single Cloudflare-fronted domain. Set only if the
+        # frontend and backend are ever split across different origins.
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-}"
+        VITE_WS_BASE_URL: "${VITE_WS_BASE_URL:-}"
+    image: aquaops-frontend:production
+    container_name: aquaops-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - aquaops
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+networks:
+  aquaops:
+    name: aquaops-production

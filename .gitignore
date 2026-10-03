@@ -39,6 +39,8 @@ build/
 # Env files
 .env.*.local
 !.env.example
+.env.production
+!.env.production.example
 
 # Misc
 *.tmp

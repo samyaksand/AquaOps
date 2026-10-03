@@ -4,6 +4,16 @@
 # container.
 FROM node:20-slim AS build
 
+# Optional build-time overrides (see src/lib/api.ts / src/hooks/useRealtime.ts).
+# Vite inlines import.meta.env.VITE_* at build time, so these must be ARGs
+# turned into ENV before `npm run build` runs, not plain runtime env vars.
+# Left empty, the app calls relative /api paths — correct for the default
+# same-origin nginx reverse-proxy deploy below.
+ARG VITE_API_BASE_URL=""
+ARG VITE_WS_BASE_URL=""
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
+
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install

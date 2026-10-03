@@ -15,7 +15,7 @@ import type {
 // proxy in the Kubernetes/Helm deploy) already serve `/api` from. Only set
 // VITE_API_BASE_URL when the frontend is deployed on a different origin
 // than the backend.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
