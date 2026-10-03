@@ -18,6 +18,7 @@ from app.domain.allocation.state import (
     NetworkState,
     OperationalState,
     SupplySource,
+    TankerUnit,
     TransitNode,
 )
 from app.domain.allocation.strategies import (
@@ -51,6 +52,7 @@ __all__ = [
     "RouteFlow",
     "StrategyName",
     "SupplySource",
+    "TankerUnit",
     "TransitNode",
     "allocate",
     "compare_strategies",

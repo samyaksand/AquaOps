@@ -13,6 +13,7 @@ from app.domain.allocation import (
     NetworkState,
     OperationalState,
     SupplySource,
+    TankerUnit,
     TransitNode,
 )
 
@@ -111,6 +112,10 @@ def build_network(supply: str) -> NetworkState:
             link("L-P1-BIG", "P1", "Z-BIG", capacity="2000", loss="0.1"),
             link("L-P1-SMALL", "P1", "Z-SMALL", capacity="2000", loss="0"),
             link("L-P1-HOSP", "P1", "F-HOSP", capacity="2000", loss="0.05"),
+        ),
+        tankers=(
+            TankerUnit("T-1", "T-1", D("20"), trips_per_day=3),
+            TankerUnit("T-2", "T-2", D("25"), trips_per_day=2),
         ),
     )
 

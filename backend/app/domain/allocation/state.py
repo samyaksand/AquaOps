@@ -86,6 +86,32 @@ class DemandPoint:
 
 
 @dataclass(frozen=True)
+class TankerUnit:
+    """A mobile carrier used where pipelines cannot deliver.
+
+    Tankers are part of the network snapshot so that logistics disruptions can
+    be modelled, but the pipeline allocation engine does not route over them.
+    """
+
+    code: str
+    name: str
+    capacity_m3: Decimal
+    trips_per_day: int = 1
+    state: OperationalState = OperationalState.ONLINE
+
+    def __post_init__(self) -> None:
+        if self.capacity_m3 <= ZERO:
+            raise ValueError(f"{self.code}: capacity must be positive")
+        if self.trips_per_day < 1:
+            raise ValueError(f"{self.code}: trips_per_day must be at least 1")
+
+    def usable_capacity(self, derate_factor: Decimal) -> Decimal:
+        """Daily haulage capacity under the current operational state."""
+        rated = self.capacity_m3 * Decimal(self.trips_per_day)
+        return _apply_state(rated, self.state, derate_factor)
+
+
+@dataclass(frozen=True)
 class Link:
     """A directed, capacitated pipeline between two network nodes."""
 
@@ -119,6 +145,7 @@ class NetworkState:
     transits: tuple[TransitNode, ...] = field(default_factory=tuple)
     demands: tuple[DemandPoint, ...] = field(default_factory=tuple)
     links: tuple[Link, ...] = field(default_factory=tuple)
+    tankers: tuple[TankerUnit, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         codes: set[str] = set()
@@ -137,6 +164,12 @@ class NetworkState:
                     raise ValueError(
                         f"{link.code}: references unknown node {endpoint!r}"
                     )
+
+        tanker_codes: set[str] = set()
+        for tanker in self.tankers:
+            if tanker.code in tanker_codes:
+                raise ValueError(f"duplicate tanker code: {tanker.code}")
+            tanker_codes.add(tanker.code)
 
     @property
     def total_demand_m3_per_day(self) -> Decimal:
