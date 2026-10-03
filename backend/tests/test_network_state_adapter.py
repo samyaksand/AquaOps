@@ -16,10 +16,11 @@ from app.db.network_state import (
     operational_state,
     priority_rank,
     releasable_supply,
+    tanker_state,
 )
 from app.domain.allocation import OperationalState, StrategyName, compare_strategies
 from app.models import Reservoir
-from app.models.enums import AssetStatus, PriorityLevel
+from app.models.enums import AssetStatus, PriorityLevel, TankerStatus
 
 D = Decimal
 
@@ -45,6 +46,17 @@ def test_priority_ranks_are_ordered_most_to_least_critical():
     ]
     assert ranks == sorted(ranks)
     assert ranks[0] == 0
+
+
+def test_tanker_in_maintenance_is_unavailable():
+    assert tanker_state(TankerStatus.MAINTENANCE) is OperationalState.UNAVAILABLE
+    for status in (
+        TankerStatus.IDLE,
+        TankerStatus.LOADING,
+        TankerStatus.EN_ROUTE,
+        TankerStatus.UNLOADING,
+    ):
+        assert tanker_state(status) is OperationalState.ONLINE
 
 
 def test_releasable_supply_is_limited_by_withdrawal_rate():
@@ -103,6 +115,12 @@ async def test_seeded_network_allocates_under_every_strategy():
     assert len(state.transits) == 2
     assert len(state.demands) == 8
     assert len(state.links) == 11
+    assert len(state.tankers) == 3
+    # TANK-003 is seeded in maintenance.
+    unavailable = [
+        t.code for t in state.tankers if t.state is OperationalState.UNAVAILABLE
+    ]
+    assert unavailable == ["TANK-003"]
 
     results = compare_strategies(state)
     assert len(results) == 4

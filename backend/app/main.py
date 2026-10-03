@@ -3,12 +3,14 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.routes import router as api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
+from app.domain.scenario import ScenarioError
 
 settings = get_settings()
 
@@ -42,5 +44,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(ScenarioError)
+async def handle_scenario_error(
+    request: Request, exc: ScenarioError
+) -> JSONResponse:
+    """A scenario that cannot apply to the network is a client error."""
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": str(exc)},
+    )
+
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)

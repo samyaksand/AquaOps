@@ -18,6 +18,7 @@ from app.domain.allocation.state import (
     NetworkState,
     OperationalState,
     SupplySource,
+    TankerUnit,
     TransitNode,
 )
 from app.models import (
@@ -26,9 +27,10 @@ from app.models import (
     NetworkNode,
     Pipeline,
     Reservoir,
+    Tanker,
     TreatmentPlant,
 )
-from app.models.enums import AssetStatus, PriorityLevel
+from app.models.enums import AssetStatus, PriorityLevel, TankerStatus
 
 ZERO = Decimal("0")
 
@@ -46,6 +48,9 @@ _PRIORITY_RANK = {
     PriorityLevel.LOW: 3,
 }
 
+# A tanker in transit or being serviced is not available for dispatch.
+_TANKER_UNAVAILABLE = {TankerStatus.MAINTENANCE}
+
 
 def operational_state(status: AssetStatus) -> OperationalState:
     return _STATUS_MAP[status]
@@ -53,6 +58,13 @@ def operational_state(status: AssetStatus) -> OperationalState:
 
 def priority_rank(priority: PriorityLevel) -> int:
     return _PRIORITY_RANK[priority]
+
+
+def tanker_state(status: TankerStatus) -> OperationalState:
+    """Whether a tanker is available for dispatch."""
+    if status in _TANKER_UNAVAILABLE:
+        return OperationalState.UNAVAILABLE
+    return OperationalState.ONLINE
 
 
 def releasable_supply(reservoir: Reservoir) -> Decimal:
@@ -69,6 +81,7 @@ async def load_network_state(session: AsyncSession) -> NetworkState:
     zones = (await session.execute(select(DemandZone))).scalars().all()
     facilities = (await session.execute(select(CriticalFacility))).scalars().all()
     pipelines = (await session.execute(select(Pipeline))).scalars().all()
+    fleet = (await session.execute(select(Tanker))).scalars().all()
 
     node_codes = dict(
         (await session.execute(select(NetworkNode.id, NetworkNode.code))).all()
@@ -133,6 +146,22 @@ async def load_network_state(session: AsyncSession) -> NetworkState:
         for pipeline in sorted(pipelines, key=lambda item: item.code)
     )
 
+    tankers = tuple(
+        TankerUnit(
+            code=tanker.code,
+            # The Tanker table has no display name; its code is the label.
+            name=tanker.code,
+            capacity_m3=tanker.capacity_m3,
+            trips_per_day=tanker.trips_per_day,
+            state=tanker_state(tanker.status),
+        )
+        for tanker in sorted(fleet, key=lambda item: item.code)
+    )
+
     return NetworkState(
-        sources=sources, transits=transits, demands=demands, links=links
+        sources=sources,
+        transits=transits,
+        demands=demands,
+        links=links,
+        tankers=tankers,
     )

@@ -2,6 +2,8 @@
 
 from fastapi import APIRouter
 
+from app.api import allocation, network, scenarios
+
 router = APIRouter()
 
 
@@ -9,3 +11,8 @@ router = APIRouter()
 async def health_check() -> dict[str, str]:
     """Basic liveness check endpoint."""
     return {"status": "ok"}
+
+
+router.include_router(network.router)
+router.include_router(allocation.router)
+router.include_router(scenarios.router)
