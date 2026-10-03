@@ -39,6 +39,16 @@ class Settings(BaseSettings):
     )
     database_echo: bool = False
 
+    # Redis: current-state cache, and pub/sub fanout for realtime events so
+    # every API process (not just the one that computed a result) can
+    # broadcast it to its own WebSocket clients.
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Kafka: event transport for allocation/scenario outcomes. Best-effort —
+    # the API and WebSocket layers must keep working if the broker is down.
+    kafka_bootstrap_servers: str = "localhost:9092"
+    kafka_enabled: bool = True
+
 
 @lru_cache
 def get_settings() -> Settings:

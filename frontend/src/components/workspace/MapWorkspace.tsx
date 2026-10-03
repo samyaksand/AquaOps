@@ -16,6 +16,7 @@ interface MapWorkspaceProps {
   error: string | null
   onRetry: () => void
   allocation?: AllocationResult | null
+  showingScenario?: boolean
 }
 
 /** Chrome around the interactive network map: title bar and type legend. */
@@ -25,14 +26,22 @@ export function MapWorkspace({
   error,
   onRetry,
   allocation = null,
+  showingScenario = false,
 }: MapWorkspaceProps) {
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-hairline bg-surface">
+    <div
+      className={
+        showingScenario
+          ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-status-warn/40 bg-surface'
+          : 'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-hairline bg-surface'
+      }
+    >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
         <div className="flex items-center gap-2">
           <Map className="size-4 text-aqua-400" aria-hidden="true" />
           <h2 className="text-sm font-semibold text-ink">Network Map</h2>
           <Badge tone="neutral">Rivertown</Badge>
+          {showingScenario ? <Badge tone="warn">Scenario</Badge> : null}
           {allocation ? (
             <Badge tone="info">{STRATEGY_LABELS[allocation.strategy as StrategyName] ?? allocation.strategy} allocated</Badge>
           ) : null}

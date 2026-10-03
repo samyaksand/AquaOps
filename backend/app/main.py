@@ -1,5 +1,6 @@
 """AquaOps FastAPI application entrypoint."""
 
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -8,9 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routes import router as api_router
+from app.cache.redis_client import close_redis
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.domain.scenario import ScenarioError
+from app.events.producer import get_event_producer
+from app.realtime.manager import get_connection_manager
 
 settings = get_settings()
 
@@ -21,7 +25,13 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("%s starting up (environment=%s)", settings.app_name, settings.environment)
+    # Relays allocation/scenario events published by any process (including
+    # the Kafka worker) to this process's own WebSocket clients.
+    listener = asyncio.create_task(get_connection_manager().listen_to_redis())
     yield
+    listener.cancel()
+    await get_event_producer().close()
+    await close_redis()
     logger.info("%s shutting down", settings.app_name)
 
 

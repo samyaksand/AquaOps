@@ -1,4 +1,4 @@
-import { ArrowRight, GitCompareArrows } from 'lucide-react'
+import { GitCompareArrows, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { formatPercent, formatVolume } from '@/lib/format'
 import type { AllocationResult } from '@/types/network'
@@ -19,14 +19,14 @@ export function ComparisonBar({ normal, scenario }: ComparisonBarProps) {
   return (
     <section
       aria-label="Normal vs scenario comparison"
-      className="shrink-0 rounded-panel border border-hairline bg-surface"
+      className="shrink-0 rounded-panel border border-status-warn/30 bg-surface"
     >
       <div className="flex items-center gap-2 border-b border-hairline px-4 py-2.5">
         <GitCompareArrows className="size-4 text-status-warn" aria-hidden="true" />
         <h2 className="text-sm font-semibold text-ink">Normal vs Scenario</h2>
         {!normal ? (
           <span className="text-[11px] text-ink-subtle">
-            Run a normal allocation first to compare
+            — run a normal allocation to compare against it
           </span>
         ) : null}
       </div>
@@ -80,34 +80,42 @@ function CompareMetric({
     percent ? formatPercent(value) : formatVolume(value)
 
   const delta = before !== undefined ? after - before : null
-  const worse = delta !== null && (invert ? delta > 0 : delta < 0)
-  const better = delta !== null && (invert ? delta < 0 : delta > 0)
+  const worse = delta !== null && delta !== 0 && (invert ? delta > 0 : delta < 0)
+  const better = delta !== null && delta !== 0 && (invert ? delta < 0 : delta > 0)
+  const toneClass = worse
+    ? 'text-status-critical'
+    : better
+      ? 'text-status-ok'
+      : 'text-ink'
 
   return (
     <div className="min-w-0">
       <p className="text-[11px] font-medium tracking-wide text-ink-subtle uppercase">
         {label}
       </p>
-      <div className="mt-1 flex items-center gap-1.5 text-sm">
-        {before !== undefined ? (
-          <>
-            <span className="tabular text-ink-subtle">{format(before)}</span>
-            <ArrowRight className="size-3 text-ink-subtle" aria-hidden="true" />
-          </>
-        ) : null}
-        <span
-          className={
-            worse
-              ? 'tabular font-semibold text-status-critical'
-              : better
-                ? 'tabular font-semibold text-status-ok'
-                : 'tabular font-semibold text-ink'
-          }
-        >
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className={`tabular text-lg font-semibold ${toneClass}`}>
           {format(after)}
         </span>
-        {unit ? <span className="text-xs text-ink-subtle">{unit}</span> : null}
+        {unit ? <span className="text-[11px] text-ink-subtle">{unit}</span> : null}
       </div>
+      {delta !== null && delta !== 0 ? (
+        <div
+          className={`mt-0.5 flex items-center gap-1 text-[11px] ${toneClass}`}
+        >
+          {delta > 0 ? (
+            <TrendingUp className="size-3" aria-hidden="true" />
+          ) : (
+            <TrendingDown className="size-3" aria-hidden="true" />
+          )}
+          <span className="tabular">
+            {delta > 0 ? '+' : ''}
+            {format(delta)} vs normal
+          </span>
+        </div>
+      ) : before !== undefined ? (
+        <p className="mt-0.5 text-[11px] text-ink-subtle">No change</p>
+      ) : null}
     </div>
   )
 }

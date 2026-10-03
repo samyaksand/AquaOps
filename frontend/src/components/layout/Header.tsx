@@ -1,10 +1,11 @@
 import { clsx } from 'clsx'
-import { Activity, CircleSlash, RefreshCw } from 'lucide-react'
+import { Activity, CircleSlash, RefreshCw, Zap, ZapOff } from 'lucide-react'
 
 import { Badge, Dot } from '@/components/ui/Badge'
 import { IconButton } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/States'
+import type { RealtimeStatus } from '@/hooks/useRealtime'
 import { useAppStore, type ViewId } from '@/store/useAppStore'
 import {
   STRATEGIES,
@@ -40,9 +41,15 @@ interface HeaderProps {
   connected: boolean
   loading: boolean
   onRefresh: () => void
+  realtimeStatus?: RealtimeStatus
 }
 
-export function Header({ connected, loading, onRefresh }: HeaderProps) {
+export function Header({
+  connected,
+  loading,
+  onRefresh,
+  realtimeStatus,
+}: HeaderProps) {
   const view = useAppStore((state) => state.view)
   const strategy = useAppStore((state) => state.strategy)
   const setStrategy = useAppStore((state) => state.setStrategy)
@@ -79,6 +86,7 @@ export function Header({ connected, loading, onRefresh }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1.5">
+        {realtimeStatus ? <RealtimeIndicator status={realtimeStatus} /> : null}
         <ApiStatus connected={connected} loading={loading} />
         <IconButton
           label="Refresh network"
@@ -89,6 +97,40 @@ export function Header({ connected, loading, onRefresh }: HeaderProps) {
         </IconButton>
       </div>
     </header>
+  )
+}
+
+/** Subtle indicator for the WebSocket relay — separate from `ApiStatus`,
+ * which reflects whether the last REST load of the network succeeded. */
+function RealtimeIndicator({ status }: { status: RealtimeStatus }) {
+  if (status === 'live') {
+    return (
+      <span
+        className="flex items-center gap-1 text-status-ok"
+        title="Live updates connected"
+      >
+        <Zap className="size-3.5" aria-hidden="true" />
+        <span className="hidden text-[11px] lg:inline">Live updates</span>
+      </span>
+    )
+  }
+  if (status === 'connecting') {
+    return (
+      <span
+        className="flex items-center gap-1 text-ink-subtle"
+        title="Connecting to live updates"
+      >
+        <Spinner className="size-3" />
+      </span>
+    )
+  }
+  return (
+    <span
+      className="flex items-center gap-1 text-ink-subtle"
+      title="Live updates disconnected — reconnecting"
+    >
+      <ZapOff className="size-3.5" aria-hidden="true" />
+    </span>
   )
 }
 

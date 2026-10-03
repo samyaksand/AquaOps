@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.deps import CurrentNetwork
+from app.events.publish import publish_allocation_computed
 from app.schemas.allocation import AllocateRequest, AllocationResultOut
 from app.services.allocation_service import allocate_network
 
@@ -19,4 +20,6 @@ async def allocate(
 ) -> AllocationResultOut:
     """Run the allocation engine over the current network state."""
     result = allocate_network(state, request.strategy)
-    return AllocationResultOut.from_domain(result)
+    out = AllocationResultOut.from_domain(result)
+    publish_allocation_computed(out)
+    return out

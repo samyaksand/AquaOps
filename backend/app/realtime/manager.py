@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 from fastapi import WebSocket
 from pydantic import BaseModel
+from redis.exceptions import RedisError
 
+from app.cache.redis_client import get_redis
+from app.cache.state_cache import PUBSUB_CHANNEL
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -88,6 +92,79 @@ class ConnectionManager:
             await self.disconnect(client_id)
 
         return delivered
+
+    async def broadcast_raw(self, payload: dict) -> int:
+        """Send an already-serialized payload to every live client.
+
+        Used for messages relayed from Redis pub/sub, which arrive as JSON
+        from another process rather than as a local `BaseModel`.
+        """
+        async with self._lock:
+            targets = list(self._clients.items())
+
+        stale: list[str] = []
+        delivered = 0
+        for client_id, websocket in targets:
+            try:
+                await websocket.send_json(payload)
+                delivered += 1
+            except Exception:
+                logger.warning("websocket %s broadcast failed; dropping", client_id)
+                stale.append(client_id)
+
+        for client_id in stale:
+            await self.disconnect(client_id)
+
+        return delivered
+
+    async def listen_to_redis(self) -> None:
+        """Subscribe to the shared pub/sub channel and relay to local clients.
+
+        Runs for the process lifetime as a background task. Events published
+        by this same process's own request handlers are relayed back too —
+        harmless, since a client applying the same allocation twice is a
+        no-op — which keeps the fanout path uniform instead of needing a
+        special case for "my own event came back to me".
+        """
+        try:
+            redis = get_redis()
+            pubsub = redis.pubsub()
+            await pubsub.subscribe(PUBSUB_CHANNEL)
+        except RedisError:
+            logger.warning(
+                "could not subscribe to redis pub/sub; realtime fanout from "
+                "other processes/the worker is disabled for this process",
+                exc_info=True,
+            )
+            return
+
+        logger.info("subscribed to redis channel %s", PUBSUB_CHANNEL)
+        try:
+            async for message in pubsub.listen():
+                if message["type"] != "message":
+                    continue
+                try:
+                    payload = json.loads(message["data"])
+                except (TypeError, ValueError):
+                    logger.warning("dropping malformed pub/sub message")
+                    continue
+                await self.broadcast_raw(_envelope_to_client_event(payload))
+        except RedisError:
+            logger.warning("redis pub/sub listener failed", exc_info=True)
+        finally:
+            await pubsub.unsubscribe(PUBSUB_CHANNEL)
+            await pubsub.aclose()
+
+
+def _envelope_to_client_event(envelope: dict) -> dict:
+    """Unwrap a Kafka `EventEnvelope` into the bare client-facing event.
+
+    Client code (HTTP responses, direct WebSocket broadcasts) already speaks
+    the bare `{"type": ..., ...}` shape; relayed events are normalized to the
+    same shape so the frontend has one message format regardless of path.
+    """
+    payload = envelope.get("payload", envelope)
+    return payload
 
 
 _manager = ConnectionManager()

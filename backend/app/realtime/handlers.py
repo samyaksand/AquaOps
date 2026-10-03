@@ -13,6 +13,11 @@ from pydantic import ValidationError
 
 from app.core.logging import get_logger
 from app.domain.scenario import ScenarioError
+from app.events.publish import (
+    publish_allocation_computed,
+    publish_scenario_allocation_computed,
+    publish_scenario_applied,
+)
 from app.realtime.manager import ConnectionManager
 from app.schemas.allocation import AllocationResultOut
 from app.schemas.network import NetworkStateOut
@@ -112,18 +117,18 @@ async def _dispatch(command, provider):
     if isinstance(command, AllocateCommand):
         state = await provider()
         result = allocate_network(state, command.strategy)
-        return AllocationEvent(
-            allocation=AllocationResultOut.from_domain(result)
-        )
+        out = AllocationResultOut.from_domain(result)
+        publish_allocation_computed(out)
+        return AllocationEvent(allocation=out)
 
     if isinstance(command, ApplyScenarioCommand):
         state = await provider()
         scenario = command.scenario.to_domain()
         disrupted = apply_scenario_to_network(state, scenario)
-        return ScenarioAppliedEvent(
-            scenario=ScenarioSummaryOut.from_domain(scenario),
-            network=NetworkStateOut.from_domain(disrupted),
-        )
+        summary = ScenarioSummaryOut.from_domain(scenario)
+        network_out = NetworkStateOut.from_domain(disrupted)
+        publish_scenario_applied(summary, network_out)
+        return ScenarioAppliedEvent(scenario=summary, network=network_out)
 
     if isinstance(command, ScenarioAllocateCommand):
         state = await provider()
@@ -131,10 +136,14 @@ async def _dispatch(command, provider):
         disrupted, result = allocate_scenario(
             state, scenario, command.strategy
         )
+        summary = ScenarioSummaryOut.from_domain(scenario)
+        network_out = NetworkStateOut.from_domain(disrupted)
+        allocation_out = AllocationResultOut.from_domain(result)
+        publish_scenario_allocation_computed(summary, network_out, allocation_out)
         return ScenarioAllocationEvent(
-            scenario=ScenarioSummaryOut.from_domain(scenario),
-            network=NetworkStateOut.from_domain(disrupted),
-            allocation=AllocationResultOut.from_domain(result),
+            scenario=summary,
+            network=network_out,
+            allocation=allocation_out,
         )
 
     raise ValueError(f"unhandled command type: {type(command).__name__}")

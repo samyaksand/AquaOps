@@ -7,6 +7,7 @@ import { MetricsBar } from '@/components/workspace/MetricsBar'
 import { ScenarioPanel } from '@/components/workspace/ScenarioPanel'
 import { useAllocation } from '@/hooks/useAllocation'
 import { useNetwork } from '@/hooks/useNetwork'
+import { useRealtime } from '@/hooks/useRealtime'
 import { useAppStore } from '@/store/useAppStore'
 import { useScenarioStore } from '@/store/useScenarioStore'
 
@@ -26,6 +27,7 @@ import { useScenarioStore } from '@/store/useScenarioStore'
 export function AppShell() {
   const { network, error, loading, refresh } = useNetwork()
   const { allocation: normalAllocation } = useAllocation()
+  const { status: realtimeStatus } = useRealtime()
   const view = useAppStore((state) => state.view)
 
   const scenarioMode = useScenarioStore((state) => state.mode)
@@ -48,6 +50,7 @@ export function AppShell() {
           connected={network !== null && error === null}
           loading={loading}
           onRefresh={() => void refresh()}
+          realtimeStatus={realtimeStatus}
         />
         <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
           <div className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
@@ -58,6 +61,7 @@ export function AppShell() {
                 error={error}
                 onRetry={() => void refresh()}
                 allocation={displayedAllocation}
+                showingScenario={showingScenario}
               />
             </div>
             {inScenarioView ? (

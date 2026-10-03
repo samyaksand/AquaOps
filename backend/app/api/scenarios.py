@@ -3,6 +3,10 @@
 from fastapi import APIRouter
 
 from app.api.deps import CurrentNetwork
+from app.events.publish import (
+    publish_scenario_allocation_computed,
+    publish_scenario_applied,
+)
 from app.schemas.allocation import (
     AllocationResultOut,
     ScenarioAllocateRequest,
@@ -28,8 +32,11 @@ async def apply(scenario: ScenarioIn, state: CurrentNetwork) -> NetworkStateOut:
 
     The stored network is never modified.
     """
-    disrupted = apply_scenario_to_network(state, scenario.to_domain())
-    return NetworkStateOut.from_domain(disrupted)
+    domain_scenario = scenario.to_domain()
+    disrupted = apply_scenario_to_network(state, domain_scenario)
+    out = NetworkStateOut.from_domain(disrupted)
+    publish_scenario_applied(ScenarioSummaryOut.from_domain(domain_scenario), out)
+    return out
 
 
 @router.post(
@@ -43,8 +50,12 @@ async def apply_and_allocate(
     """Apply a scenario and allocate the network it produces."""
     scenario = request.scenario.to_domain()
     disrupted, result = allocate_scenario(state, scenario, request.strategy)
+    summary = ScenarioSummaryOut.from_domain(scenario)
+    network_out = NetworkStateOut.from_domain(disrupted)
+    allocation_out = AllocationResultOut.from_domain(result)
+    publish_scenario_allocation_computed(summary, network_out, allocation_out)
     return ScenarioAllocationOut(
-        scenario=ScenarioSummaryOut.from_domain(scenario),
-        network=NetworkStateOut.from_domain(disrupted),
-        allocation=AllocationResultOut.from_domain(result),
+        scenario=summary,
+        network=network_out,
+        allocation=allocation_out,
     )
