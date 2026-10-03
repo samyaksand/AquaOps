@@ -26,6 +26,10 @@ const TITLES: Record<ViewId, { title: string; subtitle: string }> = {
     title: 'Scenarios',
     subtitle: 'Simulated disruptions and their consequences',
   },
+  decision: {
+    title: 'Decision Analysis',
+    subtitle: 'Explore trade-offs across candidate allocations',
+  },
   strategies: {
     title: 'Strategies',
     subtitle: 'Compare allocation trade-offs side by side',

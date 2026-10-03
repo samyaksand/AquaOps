@@ -151,7 +151,7 @@ DEMAND_ZONES = [
         "DZ-DOWNTOWN",
         DemandZone,
         dict(
-            name="Downtown",
+            name="Worli Sea Face",
             location=_point(-97.743, 30.267),
             boundary=_box(-97.743, 30.267),
             status=AssetStatus.OPERATIONAL,
@@ -168,7 +168,7 @@ DEMAND_ZONES = [
         "DZ-RIVERSIDE",
         DemandZone,
         dict(
-            name="Riverside",
+            name="Malabar Hill",
             location=_point(-97.730, 30.250),
             boundary=_box(-97.730, 30.250),
             status=AssetStatus.OPERATIONAL,
@@ -185,7 +185,7 @@ DEMAND_ZONES = [
         "DZ-INDUSTRIAL-PARK",
         DemandZone,
         dict(
-            name="Industrial Park",
+            name="Bandra Kurla Complex",
             location=_point(-97.680, 30.240),
             boundary=_box(-97.680, 30.240),
             status=AssetStatus.OPERATIONAL,
@@ -202,7 +202,7 @@ DEMAND_ZONES = [
         "DZ-SUBURBS",
         DemandZone,
         dict(
-            name="Suburbs",
+            name="Pali Hill",
             location=_point(-97.790, 30.300),
             boundary=_box(-97.790, 30.300),
             status=AssetStatus.OPERATIONAL,
@@ -224,7 +224,7 @@ CRITICAL_FACILITIES = [
         "CF-GENHOSP",
         CriticalFacility,
         dict(
-            name="Rivertown General Hospital",
+            name="Breach Candy Hospital",
             location=_point(-97.742, 30.268),
             status=AssetStatus.OPERATIONAL,
             facility_type=FacilityType.HOSPITAL,
@@ -240,7 +240,7 @@ CRITICAL_FACILITIES = [
         "CF-STMARY",
         CriticalFacility,
         dict(
-            name="St. Mary's Medical Center",
+            name="CritiCare Asia Hospital",
             location=_point(-97.728, 30.251),
             status=AssetStatus.OPERATIONAL,
             facility_type=FacilityType.HOSPITAL,
@@ -256,7 +256,7 @@ CRITICAL_FACILITIES = [
         "CF-LINCOLN-SCHOOL",
         CriticalFacility,
         dict(
-            name="Lincoln Elementary School",
+            name="Hill Spring International School",
             location=_point(-97.792, 30.302),
             status=AssetStatus.OPERATIONAL,
             facility_type=FacilityType.SCHOOL,
@@ -272,7 +272,7 @@ CRITICAL_FACILITIES = [
         "CF-WASHINGTON-SCHOOL",
         CriticalFacility,
         dict(
-            name="Washington High School",
+            name="Bombay Scottish School",
             location=_point(-97.744, 30.266),
             status=AssetStatus.OPERATIONAL,
             facility_type=FacilityType.SCHOOL,
@@ -347,7 +347,7 @@ PIPELINES = [
         "TP-ALPHA",
         "DZ-DOWNTOWN",
         dict(
-            name="Alpha to Downtown Main",
+            name="Alpha to Worli Sea Face Main",
             capacity_m3_per_day=Decimal("48000.000"),
             current_flow_m3_per_day=Decimal("40000.000"),
             loss_ratio=Decimal("0.0150"),
@@ -361,7 +361,7 @@ PIPELINES = [
         "TP-ALPHA",
         "DZ-RIVERSIDE",
         dict(
-            name="Alpha to Riverside Main",
+            name="Alpha to Malabar Hill Main",
             capacity_m3_per_day=Decimal("28000.000"),
             current_flow_m3_per_day=Decimal("22000.000"),
             loss_ratio=Decimal("0.0200"),
@@ -375,7 +375,7 @@ PIPELINES = [
         "TP-ALPHA",
         "CF-GENHOSP",
         dict(
-            name="Alpha to General Hospital Direct Feed",
+            name="Alpha to Breach Candy Hospital Direct Feed",
             capacity_m3_per_day=Decimal("3000.000"),
             current_flow_m3_per_day=Decimal("1800.000"),
             loss_ratio=Decimal("0.0100"),
@@ -389,7 +389,7 @@ PIPELINES = [
         "TP-BRAVO",
         "DZ-INDUSTRIAL-PARK",
         dict(
-            name="Bravo to Industrial Park Main",
+            name="Bravo to Bandra Kurla Complex Main",
             capacity_m3_per_day=Decimal("32000.000"),
             current_flow_m3_per_day=Decimal("24000.000"),
             loss_ratio=Decimal("0.0250"),
@@ -403,7 +403,7 @@ PIPELINES = [
         "TP-BRAVO",
         "DZ-SUBURBS",
         dict(
-            name="Bravo to Suburbs Main",
+            name="Bravo to Pali Hill Main",
             capacity_m3_per_day=Decimal("30000.000"),
             current_flow_m3_per_day=Decimal("21000.000"),
             loss_ratio=Decimal("0.0300"),
@@ -417,7 +417,7 @@ PIPELINES = [
         "TP-BRAVO",
         "CF-LINCOLN-SCHOOL",
         dict(
-            name="Bravo to Lincoln School Feed",
+            name="Bravo to Hill Spring International School Feed",
             capacity_m3_per_day=Decimal("500.000"),
             current_flow_m3_per_day=Decimal("150.000"),
             loss_ratio=Decimal("0.0100"),
@@ -431,7 +431,7 @@ PIPELINES = [
         "DZ-DOWNTOWN",
         "CF-WASHINGTON-SCHOOL",
         dict(
-            name="Downtown Local Feed to Washington School",
+            name="Worli Sea Face Local Feed to Bombay Scottish School",
             capacity_m3_per_day=Decimal("400.000"),
             current_flow_m3_per_day=Decimal("220.000"),
             loss_ratio=Decimal("0.0050"),
@@ -445,7 +445,7 @@ PIPELINES = [
         "DZ-RIVERSIDE",
         "CF-STMARY",
         dict(
-            name="Riverside Local Feed to St. Mary's",
+            name="Malabar Hill Local Feed to CritiCare Asia Hospital",
             capacity_m3_per_day=Decimal("2000.000"),
             current_flow_m3_per_day=Decimal("1200.000"),
             loss_ratio=Decimal("0.0050"),

@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
+  ScatterChart,
   Share2,
   Waves,
 } from 'lucide-react'
@@ -23,6 +24,7 @@ const NAV: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'network', label: 'Network', icon: Share2 },
   { id: 'scenarios', label: 'Scenarios', icon: Waves },
+  { id: 'decision', label: 'Decision Analysis', icon: ScatterChart },
   { id: 'strategies', label: 'Strategies', icon: GitCompareArrows },
 ]
 

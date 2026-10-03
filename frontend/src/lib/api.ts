@@ -2,8 +2,10 @@ import axios from 'axios'
 
 import type {
   AllocationResult,
+  DecisionAnalysisResult,
   Geography,
   NetworkState,
+  ObjectiveScores,
   ScenarioAllocationResult,
   ScenarioIn,
   StrategyName,
@@ -39,6 +41,26 @@ export async function allocateScenario(
     '/scenarios/allocate',
     { scenario, strategy },
   )
+  return data
+}
+
+export async function analyzeDecisions(
+  scenario?: ScenarioIn,
+): Promise<DecisionAnalysisResult> {
+  const { data } = await api.post<DecisionAnalysisResult>('/decision/analyze', {
+    scenario: scenario ?? null,
+  })
+  return data
+}
+
+export async function scoreAllocation(
+  strategy: StrategyName,
+  scenario?: ScenarioIn,
+): Promise<ObjectiveScores> {
+  const { data } = await api.post<ObjectiveScores>('/decision/score', {
+    strategy,
+    scenario: scenario ?? null,
+  })
   return data
 }
 

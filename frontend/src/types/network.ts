@@ -250,3 +250,45 @@ export interface ScenarioAllocationResult {
   network: NetworkState
   allocation: AllocationResult
 }
+
+/**
+ * Mirrors `ObjectiveScoresOut`. All five objectives are normalized to
+ * [0, 1] with a consistent direction — higher is always better, including
+ * `unmet_demand_score` (already inverted: 1 = nothing unmet).
+ */
+export interface ObjectiveScores {
+  critical_coverage: number
+  population_served: number
+  unmet_demand_score: number
+  logistics_efficiency: number
+  equity: number
+}
+
+export const OBJECTIVE_LABELS: Record<keyof ObjectiveScores, string> = {
+  critical_coverage: 'Critical coverage',
+  population_served: 'Population served',
+  unmet_demand_score: 'Demand met',
+  logistics_efficiency: 'Logistics efficiency',
+  equity: 'Equity',
+}
+
+export const OBJECTIVE_KEYS = Object.keys(
+  OBJECTIVE_LABELS,
+) as (keyof ObjectiveScores)[]
+
+/** Mirrors `CandidateOut`: one generated allocation plus its scores. */
+export interface Candidate {
+  candidate_id: string
+  criticality_weight: number
+  population_weight: number
+  efficiency_weight: number
+  objectives: ObjectiveScores
+  is_pareto_optimal: boolean
+  allocation: AllocationResult
+}
+
+/** Mirrors `DecisionAnalysisOut` at POST /api/v1/decision/analyze. */
+export interface DecisionAnalysisResult {
+  candidates: Candidate[]
+  frontier_candidate_ids: string[]
+}

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 import type { AllocationResult, NetworkState, StrategyName } from '@/types/network'
 
-export type ViewId = 'overview' | 'network' | 'scenarios' | 'strategies'
+export type ViewId = 'overview' | 'network' | 'scenarios' | 'decision' | 'strategies'
 
 interface AppState {
   view: ViewId
@@ -18,6 +18,13 @@ interface AppState {
   allocationError: string | null
   allocationLoading: boolean
 
+  /** A Decision Analysis candidate pinned for map inspection — set only by
+   * "Inspect on Map", shown instead of the normal allocation until cleared.
+   * Carries the candidate id so the map can badge it clearly as inspected
+   * rather than the live allocation. */
+  inspectedAllocation: AllocationResult | null
+  inspectedCandidateId: string | null
+
   setView: (view: ViewId) => void
   setStrategy: (strategy: StrategyName) => void
   toggleSidebar: () => void
@@ -31,6 +38,12 @@ interface AppState {
   setAllocationError: (message: string | null) => void
   setAllocationLoading: (loading: boolean) => void
   clearAllocation: () => void
+
+  setInspectedAllocation: (
+    allocation: AllocationResult,
+    candidateId: string,
+  ) => void
+  clearInspectedAllocation: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -46,6 +59,9 @@ export const useAppStore = create<AppState>((set) => ({
   allocation: null,
   allocationError: null,
   allocationLoading: false,
+
+  inspectedAllocation: null,
+  inspectedCandidateId: null,
 
   setView: (view) => set({ view }),
   setStrategy: (strategy) => set({ strategy }),
@@ -66,4 +82,9 @@ export const useAppStore = create<AppState>((set) => ({
   setAllocationLoading: (allocationLoading) => set({ allocationLoading }),
   clearAllocation: () =>
     set({ allocation: null, allocationError: null, allocationLoading: false }),
+
+  setInspectedAllocation: (inspectedAllocation, inspectedCandidateId) =>
+    set({ inspectedAllocation, inspectedCandidateId }),
+  clearInspectedAllocation: () =>
+    set({ inspectedAllocation: null, inspectedCandidateId: null }),
 }))
