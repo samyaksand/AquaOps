@@ -89,3 +89,61 @@ export const PRIORITY_LABELS: Record<number, string> = {
   2: 'Medium',
   3: 'Low',
 }
+
+/** Mirrors `AllocationResultOut` at POST /api/v1/allocate. */
+export interface RouteFlow {
+  source_code: string
+  node_codes: string[]
+  delivered_m3_per_day: number
+  withdrawn_m3_per_day: number
+  efficiency: number
+}
+
+export interface DemandAllocation {
+  code: string
+  name: string
+  kind: DemandKind
+  priority_rank: number
+  population: number
+  demand_m3_per_day: number
+  minimum_demand_m3_per_day: number
+  supplied_m3_per_day: number
+  unmet_m3_per_day: number
+  withdrawn_m3_per_day: number
+  transit_loss_m3_per_day: number
+  satisfaction_ratio: number
+  meets_minimum: boolean
+  fully_supplied: boolean
+  routes: RouteFlow[]
+}
+
+export interface SourceWithdrawal {
+  source_code: string
+  withdrawn_m3_per_day: number
+}
+
+export interface AllocationMetrics {
+  total_demand_m3_per_day: number
+  total_supplied_m3_per_day: number
+  total_unmet_m3_per_day: number
+  total_withdrawn_m3_per_day: number
+  total_transit_loss_m3_per_day: number
+  total_supply_available_m3_per_day: number
+  demand_coverage_ratio: number
+  total_population: number
+  population_served: number
+  population_fully_served: number
+  population_weighted_satisfaction: number
+  critical_facility_coverage: number
+  critical_facility_full_coverage: number
+  delivery_efficiency: number
+  supply_utilization: number
+  minimum_demand_shortfalls: string[]
+}
+
+export interface AllocationResult {
+  strategy: string
+  metrics: AllocationMetrics
+  allocations: DemandAllocation[]
+  source_withdrawals: SourceWithdrawal[]
+}

@@ -3,6 +3,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { DecisionPanel } from '@/components/workspace/DecisionPanel'
 import { MapWorkspace } from '@/components/workspace/MapWorkspace'
 import { MetricsBar } from '@/components/workspace/MetricsBar'
+import { useAllocation } from '@/hooks/useAllocation'
 import { useNetwork } from '@/hooks/useNetwork'
 
 /**
@@ -14,6 +15,7 @@ import { useNetwork } from '@/hooks/useNetwork'
  */
 export function AppShell() {
   const { network, error, loading, refresh } = useNetwork()
+  const { allocation } = useAllocation()
 
   return (
     <div className="flex h-screen overflow-hidden bg-abyss">
@@ -32,6 +34,7 @@ export function AppShell() {
                 loading={loading}
                 error={error}
                 onRetry={() => void refresh()}
+                allocation={allocation}
               />
             </div>
             <DecisionPanel network={network} />

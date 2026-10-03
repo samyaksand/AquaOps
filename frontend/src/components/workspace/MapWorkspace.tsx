@@ -3,13 +3,19 @@ import { Building2, Factory, Hospital, Map, Truck, Waves } from 'lucide-react'
 import { NetworkMap } from '@/components/map/NetworkMap'
 import { KIND_COLORS } from '@/components/map/glyphs'
 import { Badge } from '@/components/ui/Badge'
-import type { NetworkState } from '@/types/network'
+import {
+  STRATEGY_LABELS,
+  type AllocationResult,
+  type NetworkState,
+  type StrategyName,
+} from '@/types/network'
 
 interface MapWorkspaceProps {
   network: NetworkState | null
   loading: boolean
   error: string | null
   onRetry: () => void
+  allocation?: AllocationResult | null
 }
 
 /** Chrome around the interactive network map: title bar and type legend. */
@@ -18,6 +24,7 @@ export function MapWorkspace({
   loading,
   error,
   onRetry,
+  allocation = null,
 }: MapWorkspaceProps) {
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-hairline bg-surface">
@@ -26,6 +33,9 @@ export function MapWorkspace({
           <Map className="size-4 text-aqua-400" aria-hidden="true" />
           <h2 className="text-sm font-semibold text-ink">Network Map</h2>
           <Badge tone="neutral">Rivertown</Badge>
+          {allocation ? (
+            <Badge tone="info">{STRATEGY_LABELS[allocation.strategy as StrategyName] ?? allocation.strategy} allocated</Badge>
+          ) : null}
         </div>
         {network ? (
           <span className="tabular hidden text-[11px] text-ink-subtle sm:block">
@@ -43,6 +53,7 @@ export function MapWorkspace({
           loading={loading}
           error={error}
           onRetry={onRetry}
+          allocation={allocation}
         />
       </div>
 

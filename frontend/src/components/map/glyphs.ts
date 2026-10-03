@@ -85,6 +85,13 @@ export function edgeWidth(capacity: number, maxCapacity: number): number {
   return 1.6 + normalized * 4.4
 }
 
+/** Allocation flow overlay width, scaled by delivered volume on the link. */
+export function flowWidth(flow: number, maxFlow: number): number {
+  if (maxFlow <= 0 || flow <= 0) return 0
+  const normalized = Math.sqrt(flow / maxFlow)
+  return 1.2 + normalized * 3.6
+}
+
 export const EDGE_COLORS: Record<OperationalState, string> = {
   online: 'var(--color-aqua-600)',
   derated: 'var(--color-status-warn)',

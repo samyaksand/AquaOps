@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { ErrorState, LoadingState } from '@/components/ui/States'
 import { useGeography } from '@/hooks/useGeography'
 import type { Point } from '@/lib/projection'
-import type { NetworkState } from '@/types/network'
+import type { AllocationResult, NetworkState } from '@/types/network'
 
 import { MapCanvas } from './MapCanvas'
 import { MapControls, MapHint } from './MapControls'
@@ -16,6 +16,7 @@ interface NetworkMapProps {
   loading: boolean
   error: string | null
   onRetry: () => void
+  allocation?: AllocationResult | null
 }
 
 export function NetworkMap({
@@ -23,6 +24,7 @@ export function NetworkMap({
   loading,
   error,
   onRetry,
+  allocation = null,
 }: NetworkMapProps) {
   const { geography, error: geographyError } = useGeography()
   const [hover, setHover] = useState<{
@@ -31,8 +33,9 @@ export function NetworkMap({
   } | null>(null)
 
   const model = useMemo(
-    () => (network && geography ? buildMapModel(network, geography) : null),
-    [network, geography],
+    () =>
+      network && geography ? buildMapModel(network, geography, allocation) : null,
+    [network, geography, allocation],
   )
 
   if (error && !network) {

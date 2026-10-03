@@ -1,18 +1,27 @@
 import { clsx } from 'clsx'
-import { Hospital, Building2, PlayCircle, SlidersHorizontal } from 'lucide-react'
+import {
+  AlertTriangle,
+  Building2,
+  Droplets,
+  Hospital,
+  PlayCircle,
+  SlidersHorizontal,
+} from 'lucide-react'
 
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Panel, PanelBody, PanelHeader } from '@/components/ui/Card'
-import { Bar } from '@/components/ui/Metric'
+import { Bar, Metric } from '@/components/ui/Metric'
 import { Select } from '@/components/ui/Select'
-import { EmptyState } from '@/components/ui/States'
-import { formatPopulation, formatVolume } from '@/lib/format'
+import { EmptyState, Spinner } from '@/components/ui/States'
+import { useAllocation } from '@/hooks/useAllocation'
+import { formatPercent, formatPopulation, formatVolume } from '@/lib/format'
 import { useAppStore } from '@/store/useAppStore'
 import {
   PRIORITY_LABELS,
   STRATEGIES,
   STRATEGY_LABELS,
+  type DemandAllocation,
   type DemandPoint,
   type NetworkState,
   type StrategyName,
@@ -28,6 +37,7 @@ const PRIORITY_TONES = ['critical', 'warn', 'info', 'neutral'] as const
 export function DecisionPanel({ network }: { network: NetworkState | null }) {
   const strategy = useAppStore((state) => state.strategy)
   const setStrategy = useAppStore((state) => state.setStrategy)
+  const { allocation, error, loading, allocate } = useAllocation()
 
   return (
     <aside
@@ -56,14 +66,81 @@ export function DecisionPanel({ network }: { network: NetworkState | null }) {
           <Button
             variant="primary"
             className="w-full"
-            disabled
-            icon={<PlayCircle className="size-4" />}
+            disabled={!network || loading}
+            onClick={() => void allocate(strategy)}
+            icon={
+              loading ? (
+                <Spinner className="text-abyss" />
+              ) : (
+                <PlayCircle className="size-4" />
+              )
+            }
           >
-            Run Allocation
+            {loading ? 'Allocating…' : 'Run Allocation'}
           </Button>
-          <p className="text-center text-[11px] text-ink-subtle">
-            Available once the allocation view lands
-          </p>
+
+          {error ? (
+            <div className="flex items-start gap-2 rounded-md bg-status-critical/10 px-2.5 py-2 text-xs text-status-critical">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span>{error}</span>
+            </div>
+          ) : null}
+
+          {allocation ? (
+            <div className="space-y-2 rounded-md border border-hairline bg-raised/50 p-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium tracking-wide text-ink-subtle uppercase">
+                  {STRATEGY_LABELS[allocation.strategy as StrategyName] ??
+                    allocation.strategy}
+                </span>
+                <Badge
+                  tone={
+                    allocation.metrics.demand_coverage_ratio >= 1
+                      ? 'ok'
+                      : allocation.metrics.demand_coverage_ratio >= 0.75
+                        ? 'warn'
+                        : 'critical'
+                  }
+                >
+                  {formatPercent(allocation.metrics.demand_coverage_ratio)} met
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+                <Metric
+                  label="Allocated"
+                  value={formatVolume(allocation.metrics.total_supplied_m3_per_day)}
+                  unit="m³/day"
+                  tone="ok"
+                  icon={<Droplets className="size-3.5" />}
+                />
+                <Metric
+                  label="Unmet"
+                  value={formatVolume(allocation.metrics.total_unmet_m3_per_day)}
+                  unit="m³/day"
+                  tone={
+                    allocation.metrics.total_unmet_m3_per_day > 0
+                      ? 'critical'
+                      : 'ok'
+                  }
+                  icon={<AlertTriangle className="size-3.5" />}
+                />
+              </div>
+              {allocation.metrics.minimum_demand_shortfalls.length > 0 ? (
+                <p className="text-[11px] text-status-critical">
+                  {allocation.metrics.minimum_demand_shortfalls.length} point(s)
+                  below lifeline minimum
+                </p>
+              ) : (
+                <p className="text-[11px] text-status-ok">
+                  All demand points meet their minimum
+                </p>
+              )}
+            </div>
+          ) : !loading && !error ? (
+            <p className="text-center text-[11px] text-ink-subtle">
+              Run an allocation to see results on the map
+            </p>
+          ) : null}
         </PanelBody>
       </Panel>
 
@@ -84,7 +161,15 @@ export function DecisionPanel({ network }: { network: NetworkState | null }) {
                   b.demand_m3_per_day - a.demand_m3_per_day,
               )
               .map((point) => (
-                <DemandRow key={point.code} point={point} />
+                <DemandRow
+                  key={point.code}
+                  point={point}
+                  allocation={
+                    allocation?.allocations.find(
+                      (item) => item.code === point.code,
+                    ) ?? null
+                  }
+                />
               ))}
           </ul>
         ) : (
@@ -99,7 +184,13 @@ export function DecisionPanel({ network }: { network: NetworkState | null }) {
   )
 }
 
-function DemandRow({ point }: { point: DemandPoint }) {
+function DemandRow({
+  point,
+  allocation,
+}: {
+  point: DemandPoint
+  allocation: DemandAllocation | null
+}) {
   const selected = useAppStore((state) => state.selectedNodeCode)
   const select = useAppStore((state) => state.selectNode)
   const isSelected = selected === point.code
@@ -107,6 +198,11 @@ function DemandRow({ point }: { point: DemandPoint }) {
     point.demand_m3_per_day > 0
       ? point.minimum_demand_m3_per_day / point.demand_m3_per_day
       : 0
+  const suppliedShare = allocation
+    ? point.demand_m3_per_day > 0
+      ? allocation.supplied_m3_per_day / point.demand_m3_per_day
+      : 1
+    : null
 
   return (
     <li>
@@ -153,15 +249,46 @@ function DemandRow({ point }: { point: DemandPoint }) {
           ) : null}
         </div>
 
-        <div className="mt-2">
-          <Bar
-            ratio={minimumShare}
-            tone={point.kind === 'facility' ? 'critical' : 'neutral'}
-          />
-          <p className="mt-1 text-[11px] text-ink-subtle">
-            Lifeline minimum {formatVolume(point.minimum_demand_m3_per_day)} m³
-          </p>
-        </div>
+        {allocation && suppliedShare !== null ? (
+          <div className="mt-2">
+            <Bar
+              ratio={suppliedShare}
+              tone={
+                allocation.fully_supplied
+                  ? 'ok'
+                  : allocation.meets_minimum
+                    ? 'warn'
+                    : 'critical'
+              }
+            />
+            <div className="mt-1 flex items-center justify-between text-[11px]">
+              <span className="text-ink-subtle">
+                {formatVolume(allocation.supplied_m3_per_day)} m³ supplied
+              </span>
+              <span
+                className={
+                  allocation.unmet_m3_per_day > 0
+                    ? 'text-status-critical'
+                    : 'text-status-ok'
+                }
+              >
+                {allocation.unmet_m3_per_day > 0
+                  ? `${formatVolume(allocation.unmet_m3_per_day)} m³ unmet`
+                  : 'Fully met'}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-2">
+            <Bar
+              ratio={minimumShare}
+              tone={point.kind === 'facility' ? 'critical' : 'neutral'}
+            />
+            <p className="mt-1 text-[11px] text-ink-subtle">
+              Lifeline minimum {formatVolume(point.minimum_demand_m3_per_day)} m³
+            </p>
+          </div>
+        )}
       </button>
     </li>
   )

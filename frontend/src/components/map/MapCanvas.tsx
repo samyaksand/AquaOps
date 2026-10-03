@@ -5,7 +5,15 @@ import { WORLD, type Point } from '@/lib/projection'
 import { useAppStore } from '@/store/useAppStore'
 import { MAX_ZOOM, MIN_ZOOM, useMapStore } from '@/store/useMapStore'
 
-import { EDGE_COLORS, KIND_COLORS, KIND_RADIUS, STATE_RING, edgeWidth, glyphPath } from './glyphs'
+import {
+  EDGE_COLORS,
+  KIND_COLORS,
+  KIND_RADIUS,
+  STATE_RING,
+  edgeWidth,
+  flowWidth,
+  glyphPath,
+} from './glyphs'
 import type { MapEntity, MapModel } from './model'
 
 interface MapCanvasProps {
@@ -56,6 +64,11 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
 
   const maxCapacity = useMemo(
     () => Math.max(...model.edges.map((edge) => edge.capacity), 1),
+    [model.edges],
+  )
+
+  const maxFlow = useMemo(
+    () => Math.max(...model.edges.map((edge) => edge.flowM3PerDay), 1),
     [model.edges],
   )
 
@@ -213,6 +226,8 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
                 selected === edge.sourceCode ||
                 selected === edge.targetCode
 
+              const hasFlow = model.hasAllocation && edge.flowM3PerDay > 0
+
               return (
                 <g key={edge.code}>
                   <line
@@ -229,9 +244,13 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
                     opacity={
                       edge.state === 'unavailable'
                         ? 0.55
-                        : active
-                          ? 1
-                          : 0.5
+                        : model.hasAllocation
+                          ? hasFlow
+                            ? 0.35
+                            : 0.15
+                          : active
+                            ? 1
+                            : 0.5
                     }
                   />
                   {active ? (
@@ -244,6 +263,20 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
                       strokeWidth={edgeWidth(edge.capacity, maxCapacity) + 3}
                       strokeLinecap="round"
                       opacity="0.14"
+                    />
+                  ) : null}
+                  {hasFlow ? (
+                    <line
+                      x1={a.x}
+                      y1={a.y}
+                      x2={b.x}
+                      y2={b.y}
+                      stroke="var(--color-aqua-400)"
+                      strokeWidth={flowWidth(edge.flowM3PerDay, maxFlow)}
+                      strokeLinecap="round"
+                      strokeDasharray="6 7"
+                      className="map-flow-line"
+                      opacity={active ? 1 : 0.85}
                     />
                   ) : null}
                 </g>
@@ -311,9 +344,28 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
               />
               <path
                 d={glyphPath(entity.kind, radius * 0.52)}
-                fill={KIND_COLORS[entity.kind]}
+                fill={
+                  entity.allocation
+                    ? entity.allocation.meetsMinimum
+                      ? KIND_COLORS[entity.kind]
+                      : 'var(--color-status-critical)'
+                    : KIND_COLORS[entity.kind]
+                }
                 opacity={offline ? 0.35 : 0.85}
               />
+
+              {entity.allocation && !entity.allocation.fullySupplied ? (
+                <circle
+                  r={radius + 4}
+                  fill="none"
+                  stroke="var(--color-status-critical)"
+                  strokeWidth={entity.allocation.meetsMinimum ? 1.25 : 2}
+                  strokeDasharray={
+                    entity.allocation.meetsMinimum ? '2 3' : undefined
+                  }
+                  opacity="0.85"
+                />
+              ) : null}
 
               {entity.state !== 'online' ? (
                 <circle

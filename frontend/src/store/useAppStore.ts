@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import type { NetworkState, StrategyName } from '@/types/network'
+import type { AllocationResult, NetworkState, StrategyName } from '@/types/network'
 
 export type ViewId = 'overview' | 'network' | 'scenarios' | 'strategies'
 
@@ -14,6 +14,10 @@ interface AppState {
   networkError: string | null
   networkLoading: boolean
 
+  allocation: AllocationResult | null
+  allocationError: string | null
+  allocationLoading: boolean
+
   setView: (view: ViewId) => void
   setStrategy: (strategy: StrategyName) => void
   toggleSidebar: () => void
@@ -22,6 +26,11 @@ interface AppState {
   setNetwork: (network: NetworkState) => void
   setNetworkError: (message: string | null) => void
   setNetworkLoading: (loading: boolean) => void
+
+  setAllocation: (allocation: AllocationResult) => void
+  setAllocationError: (message: string | null) => void
+  setAllocationLoading: (loading: boolean) => void
+  clearAllocation: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -34,6 +43,10 @@ export const useAppStore = create<AppState>((set) => ({
   networkError: null,
   networkLoading: false,
 
+  allocation: null,
+  allocationError: null,
+  allocationLoading: false,
+
   setView: (view) => set({ view }),
   setStrategy: (strategy) => set({ strategy }),
   toggleSidebar: () =>
@@ -45,4 +58,12 @@ export const useAppStore = create<AppState>((set) => ({
   setNetworkError: (networkError) =>
     set({ networkError, networkLoading: false }),
   setNetworkLoading: (networkLoading) => set({ networkLoading }),
+
+  setAllocation: (allocation) =>
+    set({ allocation, allocationError: null, allocationLoading: false }),
+  setAllocationError: (allocationError) =>
+    set({ allocationError, allocationLoading: false }),
+  setAllocationLoading: (allocationLoading) => set({ allocationLoading }),
+  clearAllocation: () =>
+    set({ allocation: null, allocationError: null, allocationLoading: false }),
 }))

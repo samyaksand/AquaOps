@@ -1,6 +1,11 @@
 import axios from 'axios'
 
-import type { Geography, NetworkState } from '@/types/network'
+import type {
+  AllocationResult,
+  Geography,
+  NetworkState,
+  StrategyName,
+} from '@/types/network'
 
 export const api = axios.create({
   baseURL: '/api/v1',
@@ -9,6 +14,13 @@ export const api = axios.create({
 
 export async function fetchNetwork(): Promise<NetworkState> {
   const { data } = await api.get<NetworkState>('/network')
+  return data
+}
+
+export async function runAllocation(
+  strategy: StrategyName,
+): Promise<AllocationResult> {
+  const { data } = await api.post<AllocationResult>('/allocate', { strategy })
   return data
 }
 

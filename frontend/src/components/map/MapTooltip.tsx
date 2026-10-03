@@ -41,6 +41,22 @@ export function MapTooltip({ entity, screen }: MapTooltipProps) {
       </p>
       <p className="tabular mt-1 text-xs text-ink-muted">{entity.headline}</p>
 
+      {entity.allocation ? (
+        <div className="mt-1.5 flex items-center gap-2 text-[11px]">
+          <span
+            className={
+              entity.allocation.meetsMinimum
+                ? 'text-status-ok'
+                : 'text-status-critical'
+            }
+          >
+            {entity.allocation.unmetM3PerDay > 0
+              ? `${Math.round(entity.allocation.unmetM3PerDay).toLocaleString()} m³/day unmet`
+              : 'Fully supplied'}
+          </span>
+        </div>
+      ) : null}
+
       <div className="mt-2 flex items-center gap-2 border-t border-hairline pt-2 text-[11px]">
         <span className="text-ink-subtle">{STATE_LABELS[entity.state]}</span>
         {entity.priorityRank !== null ? (

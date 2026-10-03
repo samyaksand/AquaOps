@@ -3,6 +3,7 @@
 import { projectAll, type Point } from '@/lib/projection'
 import type { LayerId } from '@/store/useMapStore'
 import type {
+  AllocationResult,
   Geography,
   NetworkState,
   OperationalState,
@@ -44,6 +45,16 @@ export interface MapEntity {
   details: DetailRow[]
   /** Priority rank for demand points, else null. */
   priorityRank: number | null
+  /** Set only for demand points once an allocation result is loaded. */
+  allocation: EntityAllocation | null
+}
+
+export interface EntityAllocation {
+  suppliedM3PerDay: number
+  unmetM3PerDay: number
+  satisfactionRatio: number
+  meetsMinimum: boolean
+  fullySupplied: boolean
 }
 
 export interface MapEdge {
@@ -53,12 +64,16 @@ export interface MapEdge {
   state: OperationalState
   capacity: number
   lossRatio: number
+  /** Volume flowing along this pipeline under the current allocation, if any. */
+  flowM3PerDay: number
 }
 
 export interface MapModel {
   entities: MapEntity[]
   byCode: Record<string, MapEntity>
   edges: MapEdge[]
+  /** True once an allocation result has been folded into this model. */
+  hasAllocation: boolean
 }
 
 const num = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
@@ -70,17 +85,39 @@ const ratio = new Intl.NumberFormat('en-US', {
 export function buildMapModel(
   network: NetworkState,
   geography: Geography,
+  allocation: AllocationResult | null = null,
 ): MapModel {
   // One projection over every drawable coordinate. Projecting nodes and
   // tankers separately would fit them to different bounds, so a tanker
   // outside the node envelope would land in the wrong place.
   const points = projectAll({ ...geography.nodes, ...geography.tankers })
 
+  const allocationByCode: Record<string, EntityAllocation> = {}
+  if (allocation) {
+    for (const item of allocation.allocations) {
+      allocationByCode[item.code] = {
+        suppliedM3PerDay: item.supplied_m3_per_day,
+        unmetM3PerDay: item.unmet_m3_per_day,
+        satisfactionRatio: item.satisfaction_ratio,
+        meetsMinimum: item.meets_minimum,
+        fullySupplied: item.fully_supplied,
+      }
+    }
+  }
+
+  const withdrawnByCode: Record<string, number> = {}
+  if (allocation) {
+    for (const item of allocation.source_withdrawals) {
+      withdrawnByCode[item.source_code] = item.withdrawn_m3_per_day
+    }
+  }
+
   const entities: MapEntity[] = []
 
   for (const source of network.sources) {
     const base = points[source.code]
     if (!base) continue
+    const withdrawn = withdrawnByCode[source.code]
     entities.push({
       code: source.code,
       name: source.name,
@@ -88,10 +125,17 @@ export function buildMapModel(
       layer: KIND_LAYER.reservoir,
       state: source.state,
       base,
-      headline: `${num.format(source.available_m3_per_day)} m³/day available`,
+      headline:
+        withdrawn !== undefined
+          ? `${num.format(withdrawn)} m³/day withdrawn`
+          : `${num.format(source.available_m3_per_day)} m³/day available`,
       priorityRank: null,
+      allocation: null,
       details: [
         { label: 'Releasable supply', value: `${num.format(source.available_m3_per_day)} m³/day` },
+        ...(withdrawn !== undefined
+          ? [{ label: 'Withdrawn (allocated)', value: `${num.format(withdrawn)} m³/day` }]
+          : []),
       ],
     })
   }
@@ -108,6 +152,7 @@ export function buildMapModel(
       base,
       headline: `${num.format(plant.capacity_m3_per_day)} m³/day capacity`,
       priorityRank: null,
+      allocation: null,
       details: [
         { label: 'Throughput capacity', value: `${num.format(plant.capacity_m3_per_day)} m³/day` },
         { label: 'Recovery ratio', value: ratio.format(plant.recovery_ratio) },
@@ -119,6 +164,7 @@ export function buildMapModel(
     const base = points[demand.code]
     if (!base) continue
     const kind: EntityKind = demand.kind === 'facility' ? 'facility' : 'zone'
+    const demandAllocation = allocationByCode[demand.code] ?? null
     entities.push({
       code: demand.code,
       name: demand.name,
@@ -126,11 +172,21 @@ export function buildMapModel(
       layer: KIND_LAYER[kind],
       state: 'online',
       base,
-      headline: `${num.format(demand.demand_m3_per_day)} m³/day demand`,
+      headline: demandAllocation
+        ? `${num.format(demandAllocation.suppliedM3PerDay)} of ${num.format(demand.demand_m3_per_day)} m³/day supplied`
+        : `${num.format(demand.demand_m3_per_day)} m³/day demand`,
       priorityRank: demand.priority_rank,
+      allocation: demandAllocation,
       details: [
         { label: 'Demand', value: `${num.format(demand.demand_m3_per_day)} m³/day` },
         { label: 'Lifeline minimum', value: `${num.format(demand.minimum_demand_m3_per_day)} m³/day` },
+        ...(demandAllocation
+          ? [
+              { label: 'Supplied', value: `${num.format(demandAllocation.suppliedM3PerDay)} m³/day` },
+              { label: 'Unmet', value: `${num.format(demandAllocation.unmetM3PerDay)} m³/day` },
+              { label: 'Satisfaction', value: ratio.format(demandAllocation.satisfactionRatio) },
+            ]
+          : []),
         { label: 'Population', value: num.format(demand.population) },
         { label: 'Local reserve', value: `${num.format(demand.reserve_m3)} m³` },
       ],
@@ -149,6 +205,7 @@ export function buildMapModel(
       base,
       headline: `${num.format(tanker.capacity_m3 * tanker.trips_per_day)} m³/day haulage`,
       priorityRank: null,
+      allocation: null,
       details: [
         { label: 'Capacity', value: `${num.format(tanker.capacity_m3)} m³` },
         { label: 'Trips per day', value: String(tanker.trips_per_day) },
@@ -159,6 +216,30 @@ export function buildMapModel(
 
   const byCode: Record<string, MapEntity> = {}
   for (const entity of entities) byCode[entity.code] = entity
+
+  // Map each directed node pair to the pipeline connecting them, so a
+  // route's node sequence can be resolved back to link codes.
+  const linkByPair = new Map<string, string>()
+  for (const link of network.links) {
+    linkByPair.set(`${link.source_code}>${link.target_code}`, link.code)
+    linkByPair.set(`${link.target_code}>${link.source_code}`, link.code)
+  }
+
+  const flowByLinkCode: Record<string, number> = {}
+  if (allocation) {
+    for (const item of allocation.allocations) {
+      for (const route of item.routes) {
+        // A route's path is [source, ...intermediate transit nodes, demand].
+        const path = [route.source_code, ...route.node_codes]
+        for (let i = 0; i < path.length - 1; i += 1) {
+          const linkCode = linkByPair.get(`${path[i]}>${path[i + 1]}`)
+          if (!linkCode) continue
+          flowByLinkCode[linkCode] =
+            (flowByLinkCode[linkCode] ?? 0) + route.delivered_m3_per_day
+        }
+      }
+    }
+  }
 
   const edges: MapEdge[] = network.links
     .filter(
@@ -171,14 +252,18 @@ export function buildMapModel(
       state: link.state,
       capacity: link.capacity_m3_per_day,
       lossRatio: link.loss_ratio,
+      flowM3PerDay: flowByLinkCode[link.code] ?? 0,
     }))
 
-  return { entities, byCode, edges }
+  return { entities, byCode, edges, hasAllocation: allocation !== null }
 }
 
 export function describeEdge(edge: MapEdge): DetailRow[] {
   return [
     { label: 'Capacity', value: `${num.format(edge.capacity)} m³/day` },
     { label: 'Transit loss', value: ratio.format(edge.lossRatio) },
+    ...(edge.flowM3PerDay > 0
+      ? [{ label: 'Allocated flow', value: `${num.format(edge.flowM3PerDay)} m³/day` }]
+      : []),
   ]
 }
