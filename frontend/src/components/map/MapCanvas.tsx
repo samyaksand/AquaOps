@@ -7,14 +7,25 @@ import { MAX_ZOOM, MIN_ZOOM, useMapStore } from '@/store/useMapStore'
 
 import {
   EDGE_COLORS,
-  KIND_COLORS,
+  ICON_SCALE,
   KIND_RADIUS,
   STATE_RING,
   edgeWidth,
   flowWidth,
-  glyphPath,
 } from './glyphs'
+import { iconFor } from './icons'
 import type { MapEntity, MapModel } from './model'
+
+// Reservoirs, plants, and critical facilities are the infrastructure an
+// operator orients by, so their labels stay on at every zoom. Demand zones
+// and tankers label only on hover/select/zoom-in — at rest their names would
+// otherwise compete for space and read as a flowchart rather than a map.
+const ALWAYS_LABELED_KINDS = new Set<MapEntity['kind']>([
+  'reservoir',
+  'plant',
+  'facility',
+])
+const LABEL_ZOOM_THRESHOLD = 1.4
 
 interface MapCanvasProps {
   model: MapModel
@@ -76,6 +87,23 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
     () => model.entities.filter((entity) => layers[entity.layer]),
     [model.entities, layers],
   )
+
+  // The set of node codes directly connected to the hovered/selected node,
+  // so the rest of the network can recede rather than compete for attention.
+  const focusCode = selected ?? hovered
+  const connectedCodes = useMemo(() => {
+    if (!focusCode) return null
+    const set = new Set<string>([focusCode])
+    for (const edge of model.edges) {
+      if (edge.sourceCode === focusCode) set.add(edge.targetCode)
+      if (edge.targetCode === focusCode) set.add(edge.sourceCode)
+    }
+    for (const tether of model.tankerTethers) {
+      if (tether.tankerCode === focusCode) set.add(tether.hubCode)
+      if (tether.hubCode === focusCode) set.add(tether.tankerCode)
+    }
+    return set
+  }, [focusCode, model.edges, model.tankerTethers])
 
   const handleNodePointerDown = (
     event: React.PointerEvent<SVGGElement>,
@@ -177,19 +205,19 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
       <defs>
         <pattern
           id="map-grid"
-          width="40"
-          height="40"
+          width="48"
+          height="48"
           patternUnits="userSpaceOnUse"
         >
           <path
-            d="M 40 0 L 0 0 0 40"
+            d="M 48 0 L 0 0 0 48"
             fill="none"
             stroke="var(--color-hairline)"
             strokeWidth="1"
           />
         </pattern>
-        <radialGradient id="map-vignette" cx="50%" cy="50%" r="70%">
-          <stop offset="55%" stopColor="white" stopOpacity="1" />
+        <radialGradient id="map-vignette" cx="50%" cy="50%" r="72%">
+          <stop offset="50%" stopColor="white" stopOpacity="1" />
           <stop offset="100%" stopColor="white" stopOpacity="0" />
         </radialGradient>
         <mask id="map-grid-mask">
@@ -206,7 +234,7 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
         height={WORLD.height}
         fill="url(#map-grid)"
         mask="url(#map-grid-mask)"
-        opacity="0.5"
+        opacity="0.35"
       />
 
       <g transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
@@ -220,63 +248,62 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
 
               const a = positionOf(source)
               const b = positionOf(target)
-              const active =
-                hovered === edge.sourceCode ||
-                hovered === edge.targetCode ||
-                selected === edge.sourceCode ||
-                selected === edge.targetCode
+              const touchesFocus =
+                connectedCodes !== null &&
+                (connectedCodes.has(edge.sourceCode) ||
+                  connectedCodes.has(edge.targetCode)) &&
+                (edge.sourceCode === focusCode || edge.targetCode === focusCode)
+              const dimmedByFocus = connectedCodes !== null && !touchesFocus
 
               const hasFlow = model.hasAllocation && edge.flowM3PerDay > 0
+              const path = curvedPath(a, b)
 
               return (
                 <g key={edge.code}>
-                  <line
-                    x1={a.x}
-                    y1={a.y}
-                    x2={b.x}
-                    y2={b.y}
+                  <path
+                    d={path}
+                    fill="none"
                     stroke={EDGE_COLORS[edge.state]}
                     strokeWidth={edgeWidth(edge.capacity, maxCapacity)}
                     strokeLinecap="round"
                     strokeDasharray={
                       edge.state === 'unavailable' ? '7 6' : undefined
                     }
+                    className="transition-opacity duration-200"
                     opacity={
                       edge.state === 'unavailable'
-                        ? 0.55
-                        : model.hasAllocation
-                          ? hasFlow
-                            ? 0.35
-                            : 0.15
-                          : active
-                            ? 1
-                            : 0.5
+                        ? 0.5
+                        : dimmedByFocus
+                          ? 0.1
+                          : model.hasAllocation
+                            ? hasFlow
+                              ? 0.35
+                              : 0.16
+                            : touchesFocus
+                              ? 1
+                              : 0.55
                     }
                   />
-                  {active ? (
-                    <line
-                      x1={a.x}
-                      y1={a.y}
-                      x2={b.x}
-                      y2={b.y}
+                  {touchesFocus ? (
+                    <path
+                      d={path}
+                      fill="none"
                       stroke="var(--color-aqua-300)"
                       strokeWidth={edgeWidth(edge.capacity, maxCapacity) + 3}
                       strokeLinecap="round"
-                      opacity="0.14"
+                      opacity="0.16"
                     />
                   ) : null}
                   {hasFlow ? (
-                    <line
-                      x1={a.x}
-                      y1={a.y}
-                      x2={b.x}
-                      y2={b.y}
+                    <path
+                      d={path}
+                      fill="none"
                       stroke="var(--color-aqua-400)"
                       strokeWidth={flowWidth(edge.flowM3PerDay, maxFlow)}
                       strokeLinecap="round"
                       strokeDasharray="6 7"
-                      className="map-flow-line"
-                      opacity={active ? 1 : 0.85}
+                      className="map-flow-line transition-opacity duration-200"
+                      opacity={dimmedByFocus ? 0.12 : touchesFocus ? 1 : 0.85}
                     />
                   ) : null}
                 </g>
@@ -303,7 +330,12 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
                   strokeWidth="1"
                   strokeDasharray="2 4"
                   strokeLinecap="round"
-                  opacity="0.35"
+                  opacity={
+                    connectedCodes && !connectedCodes.has(tether.tankerCode)
+                      ? 0.08
+                      : 0.3
+                  }
+                  className="transition-opacity duration-200"
                 />
               )
             })
@@ -313,14 +345,24 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
           const position = positionOf(entity)
           const isHovered = hovered === entity.code
           const isSelected = selected === entity.code
+          const isFocused = connectedCodes?.has(entity.code) ?? true
           const radius = KIND_RADIUS[entity.kind]
           const offline = entity.state === 'unavailable'
+          const Icon = iconFor(entity.kind, entity.category)
+
+          const unmet = entity.allocation && !entity.allocation.fullySupplied
+          const ringColor = unmet
+            ? 'var(--color-status-critical)'
+            : entity.state !== 'online'
+              ? STATE_RING[entity.state]
+              : 'var(--color-divider)'
 
           return (
             <g
               key={entity.code}
               transform={`translate(${position.x} ${position.y})`}
-              className="cursor-pointer"
+              className="cursor-pointer transition-opacity duration-200"
+              opacity={connectedCodes && !isFocused ? 0.25 : 1}
               onPointerDown={(event) => handleNodePointerDown(event, entity)}
               onPointerEnter={(event) => {
                 setHovered(entity.code)
@@ -343,80 +385,68 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
             >
               {isSelected ? (
                 <circle
-                  r={radius + 9}
+                  r={radius + 10}
                   fill="none"
-                  stroke="var(--color-aqua-400)"
-                  strokeWidth="1.5"
-                  strokeDasharray="3 4"
+                  stroke="var(--color-aqua-300)"
+                  strokeWidth="2"
                   opacity="0.9"
                 />
               ) : null}
               {isHovered && !isSelected ? (
-                <circle
-                  r={radius + 7}
-                  fill={KIND_COLORS[entity.kind]}
-                  opacity="0.12"
-                />
+                <circle r={radius + 7} fill="var(--color-aqua-400)" opacity="0.1" />
               ) : null}
 
-              <path
-                d={glyphPath(entity.kind, radius)}
+              <circle
+                r={radius}
                 fill="var(--color-surface)"
-                stroke={KIND_COLORS[entity.kind]}
-                strokeWidth="2"
-                opacity={offline ? 0.45 : 1}
-              />
-              <path
-                d={glyphPath(entity.kind, radius * 0.52)}
-                fill={
-                  entity.allocation
-                    ? entity.allocation.meetsMinimum
-                      ? KIND_COLORS[entity.kind]
-                      : 'var(--color-status-critical)'
-                    : KIND_COLORS[entity.kind]
-                }
-                opacity={offline ? 0.35 : 0.85}
+                stroke={ringColor}
+                strokeWidth={unmet ? 2.5 : 1.75}
+                opacity={offline ? 0.5 : 1}
               />
 
-              {entity.allocation && !entity.allocation.fullySupplied ? (
-                <circle
-                  r={radius + 4}
-                  fill="none"
-                  stroke="var(--color-status-critical)"
-                  strokeWidth={entity.allocation.meetsMinimum ? 1.25 : 2}
-                  strokeDasharray={
-                    entity.allocation.meetsMinimum ? '2 3' : undefined
-                  }
-                  opacity="0.85"
+              <g
+                transform={`translate(${-radius * ICON_SCALE * 0.5} ${-radius * ICON_SCALE * 0.5})`}
+                opacity={offline ? 0.45 : 0.92}
+              >
+                <Icon
+                  width={radius * ICON_SCALE}
+                  height={radius * ICON_SCALE}
+                  stroke="var(--color-ink)"
+                  strokeWidth={1.75}
+                  absoluteStrokeWidth
                 />
-              ) : null}
+              </g>
 
               {entity.state !== 'online' ? (
                 <circle
-                  cx={radius * 0.78}
-                  cy={-radius * 0.78}
-                  r="4"
+                  cx={radius * 0.74}
+                  cy={-radius * 0.74}
+                  r="4.5"
                   fill={STATE_RING[entity.state]}
                   stroke="var(--color-surface)"
-                  strokeWidth="1.5"
+                  strokeWidth="2"
                 />
               ) : null}
 
-              {layers.labels ? (
+              {layers.labels &&
+              (isSelected ||
+                isHovered ||
+                ALWAYS_LABELED_KINDS.has(entity.kind) ||
+                zoom >= LABEL_ZOOM_THRESHOLD) ? (
                 <text
-                  y={radius + 16}
+                  y={radius + 18}
                   textAnchor="middle"
                   className="pointer-events-none"
-                  fontSize="11"
+                  fontSize="12"
                   fontWeight={isSelected || isHovered ? 600 : 500}
                   fill={
                     isSelected || isHovered
                       ? 'var(--color-ink)'
-                      : 'var(--color-ink-subtle)'
+                      : 'var(--color-ink-muted)'
                   }
                   paintOrder="stroke"
                   stroke="var(--color-abyss)"
-                  strokeWidth="4.5"
+                  strokeWidth="5"
                   strokeLinejoin="round"
                 >
                   {entity.name}
@@ -428,4 +458,22 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
       </g>
     </svg>
   )
+}
+
+/** A gentle quadratic curve between two points, so pipelines crossing near
+ * the center read as distinct arcs rather than a knot of overlapping
+ * straight lines. The bow is perpendicular to the segment and scales with
+ * its length, so short local links stay nearly straight. */
+function curvedPath(a: Point, b: Point): string {
+  const mx = (a.x + b.x) / 2
+  const my = (a.y + b.y) / 2
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const length = Math.hypot(dx, dy) || 1
+  const bow = Math.min(length * 0.08, 18)
+  const nx = -dy / length
+  const ny = dx / length
+  const cx = mx + nx * bow
+  const cy = my + ny * bow
+  return `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`
 }

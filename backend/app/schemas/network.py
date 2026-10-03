@@ -45,6 +45,9 @@ class DemandPointOut(_Out):
     priority_rank: int
     population: int
     reserve_m3: float
+    # Presentation only (e.g. "hospital", "residential") — never read by the
+    # allocation engine. Drives map iconography on the frontend.
+    category: str | None = None
 
 
 class LinkOut(_Out):

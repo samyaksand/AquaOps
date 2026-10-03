@@ -42,10 +42,10 @@ export function Metric({
           {label}
         </span>
       </div>
-      <div className="mt-1 flex items-baseline gap-1">
+      <div className="mt-1.5 flex items-baseline gap-1.5">
         <span
           className={clsx(
-            'tabular text-xl leading-none font-semibold',
+            'tabular text-2xl leading-none font-semibold tracking-tight',
             VALUE_TONES[tone],
           )}
         >

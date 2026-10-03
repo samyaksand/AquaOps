@@ -8,6 +8,9 @@ interface AppState {
   view: ViewId
   strategy: StrategyName
   sidebarCollapsed: boolean
+  /** Collapses the Network/Scenarios side panel to a slim rail so the map
+   * stays the dominant surface by default — expand on demand, not always on. */
+  sidePanelCollapsed: boolean
   selectedNodeCode: string | null
 
   network: NetworkState | null
@@ -28,6 +31,7 @@ interface AppState {
   setView: (view: ViewId) => void
   setStrategy: (strategy: StrategyName) => void
   toggleSidebar: () => void
+  toggleSidePanel: () => void
   selectNode: (code: string | null) => void
 
   setNetwork: (network: NetworkState) => void
@@ -50,6 +54,7 @@ export const useAppStore = create<AppState>((set) => ({
   view: 'overview',
   strategy: 'balanced',
   sidebarCollapsed: false,
+  sidePanelCollapsed: true,
   selectedNodeCode: null,
 
   network: null,
@@ -67,6 +72,8 @@ export const useAppStore = create<AppState>((set) => ({
   setStrategy: (strategy) => set({ strategy }),
   toggleSidebar: () =>
     set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  toggleSidePanel: () =>
+    set((state) => ({ sidePanelCollapsed: !state.sidePanelCollapsed })),
   selectNode: (selectedNodeCode) => set({ selectedNodeCode }),
 
   setNetwork: (network) =>

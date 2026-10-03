@@ -12,6 +12,8 @@ import {
 import type { ComponentType } from 'react'
 
 import { IconButton } from '@/components/ui/Button'
+import { DemoLaunchButton } from '@/components/demo/DemoMode'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { useAppStore, type ViewId } from '@/store/useAppStore'
 
 interface NavItem {
@@ -64,9 +66,12 @@ export function Sidebar() {
                 </p>
               </div>
             </div>
-            <IconButton label="Collapse sidebar" onClick={toggle}>
-              <PanelLeftClose className="size-4" />
-            </IconButton>
+            <div className="flex items-center gap-0.5">
+              <ThemeToggle compact />
+              <IconButton label="Collapse sidebar" onClick={toggle}>
+                <PanelLeftClose className="size-4" />
+              </IconButton>
+            </div>
           </>
         )}
       </div>
@@ -109,19 +114,25 @@ export function Sidebar() {
         })}
       </ul>
 
-      <div className="border-t border-hairline p-2">
+      <div className="space-y-2 border-t border-hairline p-2">
         {collapsed ? (
-          <IconButton
-            label="Expand sidebar"
-            onClick={toggle}
-            className="mx-auto"
-          >
-            <PanelLeftOpen className="size-4" />
-          </IconButton>
+          <>
+            <ThemeToggle compact />
+            <IconButton
+              label="Expand sidebar"
+              onClick={toggle}
+              className="mx-auto"
+            >
+              <PanelLeftOpen className="size-4" />
+            </IconButton>
+          </>
         ) : (
-          <p className="px-2 py-1 text-[10px] leading-relaxed text-ink-subtle">
-            Simulated decision support. Not connected to live infrastructure.
-          </p>
+          <>
+            <DemoLaunchButton />
+            <p className="px-2 py-1 text-[10px] leading-relaxed text-ink-subtle">
+              Simulated decision support. Not connected to live infrastructure.
+            </p>
+          </>
         )}
       </div>
     </nav>

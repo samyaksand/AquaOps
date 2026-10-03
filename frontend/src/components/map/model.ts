@@ -47,6 +47,8 @@ export interface MapEntity {
   priorityRank: number | null
   /** Set only for demand points once an allocation result is loaded. */
   allocation: EntityAllocation | null
+  /** Presentation category (e.g. "hospital"), demand points only. */
+  category: string | null
 }
 
 export interface EntityAllocation {
@@ -143,6 +145,7 @@ export function buildMapModel(
           : `${num.format(source.available_m3_per_day)} m³/day available`,
       priorityRank: null,
       allocation: null,
+      category: null,
       details: [
         { label: 'Releasable supply', value: `${num.format(source.available_m3_per_day)} m³/day` },
         ...(withdrawn !== undefined
@@ -165,6 +168,7 @@ export function buildMapModel(
       headline: `${num.format(plant.capacity_m3_per_day)} m³/day capacity`,
       priorityRank: null,
       allocation: null,
+      category: null,
       details: [
         { label: 'Throughput capacity', value: `${num.format(plant.capacity_m3_per_day)} m³/day` },
         { label: 'Recovery ratio', value: ratio.format(plant.recovery_ratio) },
@@ -189,6 +193,7 @@ export function buildMapModel(
         : `${num.format(demand.demand_m3_per_day)} m³/day demand`,
       priorityRank: demand.priority_rank,
       allocation: demandAllocation,
+      category: demand.category,
       details: [
         { label: 'Demand', value: `${num.format(demand.demand_m3_per_day)} m³/day` },
         { label: 'Lifeline minimum', value: `${num.format(demand.minimum_demand_m3_per_day)} m³/day` },
@@ -221,6 +226,7 @@ export function buildMapModel(
           : `Standby · ${num.format(tanker.capacity_m3 * tanker.trips_per_day)} m³/day haulage`,
       priorityRank: null,
       allocation: null,
+      category: null,
       details: [
         {
           label: 'Status',

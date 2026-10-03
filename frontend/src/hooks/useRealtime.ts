@@ -30,7 +30,13 @@ interface ServerEvent {
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 5000, 10000]
 
+// Defaults to the same origin the page was served from — correct for the
+// dev proxy and the nginx reverse-proxy deploy. Only set VITE_WS_BASE_URL
+// (e.g. "wss://api.example.com") when the backend lives on a different
+// origin than the frontend.
 function wsUrl(): string {
+  const override = import.meta.env.VITE_WS_BASE_URL as string | undefined
+  if (override) return `${override.replace(/\/$/, '')}/api/v1/ws`
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${window.location.host}/api/v1/ws`
 }

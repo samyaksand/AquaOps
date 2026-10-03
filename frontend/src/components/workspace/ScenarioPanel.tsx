@@ -18,6 +18,7 @@ import { Metric } from '@/components/ui/Metric'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/States'
 import { useScenario } from '@/hooks/useScenario'
+import { buildNameIndex, linkLabel, nameFor } from '@/lib/labels'
 import { formatPercent, formatVolume } from '@/lib/format'
 import { useAppStore } from '@/store/useAppStore'
 import { useScenarioStore } from '@/store/useScenarioStore'
@@ -56,10 +57,12 @@ function defaultChange(
   }
 }
 
-/** Target codes available for a change type, drawn from the live network. */
+/** Target options for a change type, drawn from the live network — pipeline
+ * targets show "Source → Destination" by name, never the link code. */
 function targetsFor(
   type: ScenarioChangeType,
   network: NetworkState | null,
+  names: Record<string, string>,
 ): { value: string; label: string }[] {
   if (!network) return []
   const kind = SCENARIO_CHANGE_TARGET_KIND[type]
@@ -71,7 +74,7 @@ function targetsFor(
     case 'link':
       return network.links.map((l) => ({
         value: l.code,
-        label: `${l.source_code} → ${l.target_code}`,
+        label: linkLabel(names, l.source_code, l.target_code),
       }))
     case 'zone':
       return network.demands
@@ -86,22 +89,26 @@ function targetsFor(
   }
 }
 
-function describeChange(change: ScenarioChangeIn): string {
+function describeChange(
+  change: ScenarioChangeIn,
+  names: Record<string, string>,
+): string {
+  const target = nameFor(names, change.target_code)
   switch (change.type) {
     case 'reduce_reservoir_supply':
-      return `Cut supply at ${change.target_code} by ${formatPercent(change.fraction)}`
+      return `Reduce supply from ${target} by ${formatPercent(change.fraction)}`
     case 'reduce_treatment_capacity':
-      return `Cut capacity at ${change.target_code} by ${formatPercent(change.fraction)}`
+      return `Reduce capacity at ${target} by ${formatPercent(change.fraction)}`
     case 'reduce_pipeline_capacity':
-      return `Cut pipeline ${change.target_code} capacity by ${formatPercent(change.fraction)}`
+      return `Reduce capacity on ${target} by ${formatPercent(change.fraction)}`
     case 'set_pipeline_unavailable':
-      return `Take pipeline ${change.target_code} offline`
+      return `Take ${target} offline`
     case 'change_zone_demand':
-      return `Scale zone ${change.target_code} demand to ${formatPercent(change.factor)}`
+      return `Scale demand at ${target} to ${formatPercent(change.factor)}`
     case 'change_facility_demand':
-      return `Scale facility ${change.target_code} demand to ${formatPercent(change.factor)}`
+      return `Scale demand at ${target} to ${formatPercent(change.factor)}`
     case 'set_tanker_unavailable':
-      return `Take tanker ${change.target_code} out of service`
+      return `Take ${target} out of service`
   }
 }
 
@@ -133,9 +140,14 @@ export function ScenarioPanel({ network }: { network: NetworkState | null }) {
     'reduce_reservoir_supply',
   )
 
+  // Names are resolved from the *live* (not scenario) network — codes never
+  // change identity between normal and scenario state, so this stays
+  // accurate even once `network` below has been swapped for the disrupted one.
+  const names = useMemo(() => buildNameIndex(network), [network])
+
   const targets = useMemo(
-    () => targetsFor(builderType, network),
-    [builderType, network],
+    () => targetsFor(builderType, network, names),
+    [builderType, network, names],
   )
 
   const handleAdd = () => {
@@ -153,14 +165,14 @@ export function ScenarioPanel({ network }: { network: NetworkState | null }) {
   return (
     <aside
       aria-label="Scenario panel"
-      className="flex w-full shrink-0 flex-col gap-3 overflow-y-auto xl:w-80"
+      className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto"
     >
       <StateBanner mode={mode} onReset={reset} />
 
       <Panel>
         <PanelHeader
-          title="1 · Build scenario"
-          subtitle="Describe what changes"
+          title="1 · What changes?"
+          subtitle="Pick a disruption, then which asset it hits"
           icon={<FlaskConical className="size-4" />}
         />
         <PanelBody className="space-y-3">
@@ -199,18 +211,23 @@ export function ScenarioPanel({ network }: { network: NetworkState | null }) {
           </div>
           {targets.length === 0 ? (
             <p className="text-[11px] text-ink-subtle">
-              No eligible targets for this change in the current network.
+              No eligible assets for this change in the current network.
             </p>
-          ) : null}
+          ) : (
+            <p className="text-[11px] text-ink-subtle">
+              Adds a change against {targets[0]?.label} — pick the exact asset
+              below.
+            </p>
+          )}
 
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <span className="text-[11px] font-medium tracking-wide text-ink-subtle uppercase">
-                Pending changes
+                2 · How much?
               </span>
               {drafts.length > 0 ? (
                 <span className="tabular text-[11px] text-ink-subtle">
-                  {drafts.length}
+                  {drafts.length} change{drafts.length === 1 ? '' : 's'}
                 </span>
               ) : null}
             </div>
@@ -221,6 +238,7 @@ export function ScenarioPanel({ network }: { network: NetworkState | null }) {
                     key={draft.id}
                     draft={draft.change}
                     network={network}
+                    names={names}
                     onChange={(change) => updateChange(draft.id, change)}
                     onRemove={() => removeChange(draft.id)}
                   />
@@ -237,8 +255,8 @@ export function ScenarioPanel({ network }: { network: NetworkState | null }) {
 
       <Panel>
         <PanelHeader
-          title="2 · Run"
-          subtitle="Apply, then reallocate under a strategy"
+          title="3 · Apply & reallocate"
+          subtitle="Preview the disruption, then run the allocation engine over it"
           icon={<PlayCircle className="size-4" />}
         />
         <PanelBody className="space-y-3">
@@ -268,7 +286,7 @@ export function ScenarioPanel({ network }: { network: NetworkState | null }) {
               icon={applying ? <Spinner /> : <Waves className="size-4" />}
               title="Preview the disrupted network without allocating"
             >
-              {applying ? 'Applying…' : 'Apply'}
+              {applying ? 'Applying…' : 'Apply Scenario'}
             </Button>
             <Button
               variant="primary"
@@ -300,7 +318,7 @@ export function ScenarioPanel({ network }: { network: NetworkState | null }) {
       {isScenarioLive && summary ? (
         <Panel>
           <PanelHeader
-            title="3 · Result"
+            title="4 · Consequences"
             subtitle={
               hasUnappliedEdits
                 ? 'Edited since last run — reallocate to refresh'
@@ -317,11 +335,11 @@ export function ScenarioPanel({ network }: { network: NetworkState | null }) {
             }
           />
           <PanelBody className="space-y-2.5">
-            {summary.changes.length > 0 ? (
+            {drafts.length > 0 ? (
               <ul className="space-y-1 text-[11px] text-ink-muted">
-                {summary.changes.map((line, index) => (
-                  <li key={index} className="truncate">
-                    • {line}
+                {drafts.map((draft) => (
+                  <li key={draft.id} className="truncate">
+                    • {describeChange(draft.change, names)}
                   </li>
                 ))}
               </ul>
@@ -409,17 +427,19 @@ function ErrorBanner({ message }: { message: string }) {
 function DraftRow({
   draft,
   network,
+  names,
   onChange,
   onRemove,
 }: {
   draft: ScenarioChangeIn
   network: NetworkState | null
+  names: Record<string, string>
   onChange: (change: ScenarioChangeIn) => void
   onRemove: () => void
 }) {
   const targets = useMemo(
-    () => targetsFor(draft.type, network),
-    [draft.type, network],
+    () => targetsFor(draft.type, network, names),
+    [draft.type, network, names],
   )
 
   const hasFraction = 'fraction' in draft
@@ -491,7 +511,7 @@ function DraftRow({
         </label>
       ) : null}
 
-      <p className="text-[11px] text-ink-subtle">{describeChange(draft)}</p>
+      <p className="text-[11px] text-ink-subtle">{describeChange(draft, names)}</p>
     </li>
   )
 }

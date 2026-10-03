@@ -1,7 +1,7 @@
 import type { Point } from '@/lib/projection'
 import { PRIORITY_LABELS } from '@/types/network'
 
-import { KIND_COLORS } from './glyphs'
+import { iconFor } from './icons'
 import { KIND_LABELS, type MapEntity } from './model'
 
 interface MapTooltipProps {
@@ -17,32 +17,30 @@ const STATE_LABELS = {
 
 /** Follows the cursor. Summary only — the full breakdown is a click away. */
 export function MapTooltip({ entity, screen }: MapTooltipProps) {
+  const Icon = iconFor(entity.kind, entity.category)
   return (
     <div
       role="tooltip"
-      className="pointer-events-none fixed z-50 w-56 rounded-lg border border-divider bg-depth/95 p-2.5 shadow-2xl backdrop-blur"
+      className="rise-in pointer-events-none fixed z-50 w-60 rounded-xl border border-divider bg-depth/95 p-3.5 backdrop-blur"
       style={{
-        left: Math.min(screen.x + 14, window.innerWidth - 240),
-        top: Math.min(screen.y + 14, window.innerHeight - 140),
+        left: Math.min(screen.x + 16, window.innerWidth - 256),
+        top: Math.min(screen.y + 16, window.innerHeight - 160),
+        boxShadow: 'var(--shadow-soft)',
       }}
     >
       <div className="flex items-center gap-1.5">
-        <span
-          aria-hidden="true"
-          className="size-2 shrink-0 rounded-sm"
-          style={{ backgroundColor: KIND_COLORS[entity.kind] }}
-        />
+        <Icon className="size-3.5 text-ink-subtle" aria-hidden="true" />
         <span className="text-[10px] font-medium tracking-wide text-ink-subtle uppercase">
           {KIND_LABELS[entity.kind]}
         </span>
       </div>
-      <p className="mt-1 text-sm leading-tight font-semibold text-ink">
+      <p className="mt-1.5 text-sm leading-tight font-semibold text-ink">
         {entity.name}
       </p>
       <p className="tabular mt-1 text-xs text-ink-muted">{entity.headline}</p>
 
       {entity.allocation ? (
-        <div className="mt-1.5 flex items-center gap-2 text-[11px]">
+        <div className="mt-2 flex items-center gap-2 text-[11px]">
           <span
             className={
               entity.allocation.meetsMinimum
@@ -57,7 +55,7 @@ export function MapTooltip({ entity, screen }: MapTooltipProps) {
         </div>
       ) : null}
 
-      <div className="mt-2 flex items-center gap-2 border-t border-hairline pt-2 text-[11px]">
+      <div className="mt-2.5 flex items-center gap-2 border-t border-hairline pt-2.5 text-[11px]">
         <span className="text-ink-subtle">{STATE_LABELS[entity.state]}</span>
         {entity.priorityRank !== null ? (
           <>

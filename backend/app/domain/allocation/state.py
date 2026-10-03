@@ -70,6 +70,11 @@ class DemandPoint:
     priority_rank: int = 2
     population: int = 0
     reserve_m3: Decimal = ZERO
+    # Presentation-only (e.g. "hospital", "residential"); the allocation
+    # engine and every strategy ignore it entirely. Carried here only so the
+    # API can expose it for the frontend's iconography without a second,
+    # parallel lookup path.
+    category: str | None = None
 
     def __post_init__(self) -> None:
         if self.demand_m3_per_day < ZERO:

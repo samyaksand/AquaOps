@@ -19,6 +19,10 @@ interface DecisionState {
    * navigating to the Map and back, so "Inspect on Map" survives the trip. */
   selectedCandidateId: string | null
 
+  /** A second candidate, selected only for a direct two-way comparison
+   * against the first. Cleared whenever a fresh analysis runs. */
+  compareCandidateId: string | null
+
   /** Server-computed objective scores for the current (non-candidate)
    * allocation, fetched alongside the analysis so Trade-off Summary can
    * compare like-for-like without re-deriving the arithmetic client-side. */
@@ -35,6 +39,7 @@ interface DecisionState {
   setLoading: (loading: boolean) => void
   setError: (message: string | null) => void
   selectCandidate: (candidateId: string | null) => void
+  setCompareCandidate: (candidateId: string | null) => void
   reset: () => void
 }
 
@@ -44,16 +49,25 @@ export const useDecisionStore = create<DecisionState>((set) => ({
   error: null,
   analyzedScenario: false,
   selectedCandidateId: null,
+  compareCandidateId: null,
   baselineObjectives: null,
   normalAnalysis: null,
 
   setAnalysis: (analysis, scenario) =>
-    set({ analysis, analyzedScenario: scenario, loading: false, error: null }),
+    set({
+      analysis,
+      analyzedScenario: scenario,
+      loading: false,
+      error: null,
+      compareCandidateId: null,
+    }),
   setNormalAnalysis: (normalAnalysis) => set({ normalAnalysis }),
   setBaselineObjectives: (baselineObjectives) => set({ baselineObjectives }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error, loading: false }),
-  selectCandidate: (selectedCandidateId) => set({ selectedCandidateId }),
+  selectCandidate: (selectedCandidateId) =>
+    set({ selectedCandidateId, compareCandidateId: null }),
+  setCompareCandidate: (compareCandidateId) => set({ compareCandidateId }),
   reset: () =>
     set({
       analysis: null,
@@ -61,6 +75,7 @@ export const useDecisionStore = create<DecisionState>((set) => ({
       error: null,
       analyzedScenario: false,
       selectedCandidateId: null,
+      compareCandidateId: null,
       baselineObjectives: null,
       normalAnalysis: null,
     }),

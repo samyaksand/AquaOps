@@ -1,7 +1,6 @@
 import { Building2, Factory, Hospital, Map, Truck, Waves } from 'lucide-react'
 
 import { NetworkMap } from '@/components/map/NetworkMap'
-import { KIND_COLORS } from '@/components/map/glyphs'
 import { Badge } from '@/components/ui/Badge'
 import {
   STRATEGY_LABELS,
@@ -32,14 +31,14 @@ export function MapWorkspace({
     <div
       className={
         showingScenario
-          ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-status-warn/40 bg-surface'
+          ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-status-warn/35 bg-surface'
           : 'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-hairline bg-surface'
       }
     >
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <Map className="size-4 text-aqua-400" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-ink">Network Map</h2>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <Map className="size-4 text-ink-muted" aria-hidden="true" />
+          <h2 className="text-[15px] font-semibold text-ink">Network Map</h2>
           <Badge tone="neutral">Rivertown</Badge>
           {showingScenario ? <Badge tone="warn">Scenario</Badge> : null}
           {allocation ? (
@@ -47,7 +46,7 @@ export function MapWorkspace({
           ) : null}
         </div>
         {network ? (
-          <span className="tabular hidden text-[11px] text-ink-subtle sm:block">
+          <span className="tabular hidden text-xs text-ink-subtle sm:block">
             {network.sources.length +
               network.transits.length +
               network.demands.length}{' '}
@@ -92,14 +91,9 @@ function Legend({ network }: { network: NetworkState | null }) {
     : {}
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 border-t border-hairline px-4 py-2.5">
+    <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-t border-hairline px-5 py-3">
       {ENTRIES.map(({ kind, icon: Icon, label }) => (
         <div key={kind} className="flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="size-2 rounded-sm"
-            style={{ backgroundColor: KIND_COLORS[kind] }}
-          />
           <Icon className="size-3.5 text-ink-subtle" aria-hidden="true" />
           <span className="text-xs text-ink-muted">{label}</span>
           {network ? (

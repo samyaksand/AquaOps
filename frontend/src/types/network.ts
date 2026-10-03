@@ -28,6 +28,8 @@ export interface DemandPoint {
   priority_rank: number
   population: number
   reserve_m3: number
+  /** Presentation only (e.g. "hospital", "residential"); drives map icons. */
+  category: string | null
 }
 
 export interface NetworkLink {

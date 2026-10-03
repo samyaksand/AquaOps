@@ -58,13 +58,13 @@ export function CandidateDetails({
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-md border border-hairline bg-raised/40 p-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-hairline bg-raised/40 p-3.5">
         {OBJECTIVE_KEYS.map((key) => (
           <div key={key} className="min-w-0">
-            <p className="truncate text-[10px] tracking-wide text-ink-subtle uppercase">
+            <p className="text-[10px] leading-tight tracking-wide text-ink-subtle uppercase">
               {OBJECTIVE_LABELS[key]}
             </p>
-            <p className="tabular mt-0.5 text-base font-semibold text-ink">
+            <p className="tabular mt-0.5 text-lg font-semibold text-ink">
               {formatPercent(candidate.objectives[key])}
             </p>
           </div>

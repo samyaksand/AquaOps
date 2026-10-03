@@ -1,4 +1,3 @@
-import { clsx } from 'clsx'
 import {
   Droplets,
   Gauge,
@@ -63,12 +62,12 @@ export function MetricsBar({ network }: { network: NetworkState | null }) {
   return (
     <section
       aria-label="Network metrics"
-      className="shrink-0 rounded-panel border border-hairline bg-surface"
+      className="shrink-0 rounded-2xl border border-hairline bg-surface"
     >
-      <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <Gauge className="size-4 text-aqua-400" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-ink">Network Posture</h2>
+      <div className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <Gauge className="size-4 text-ink-muted" aria-hidden="true" />
+          <h2 className="text-[15px] font-semibold text-ink">Network Posture</h2>
         </div>
         {summary ? (
           <StatusBadge
@@ -83,26 +82,9 @@ export function MetricsBar({ network }: { network: NetworkState | null }) {
         ) : null}
       </div>
 
-      <div
-        className={clsx(
-          'grid gap-x-6 gap-y-4 px-4 py-3.5',
-          'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6',
-        )}
-      >
+      <div className="grid grid-cols-2 gap-x-8 gap-y-5 px-5 py-5 sm:grid-cols-3 lg:grid-cols-6">
         {summary ? (
           <>
-            <Metric
-              label="Available supply"
-              value={formatCompact(summary.supply)}
-              unit="m³/day"
-              icon={<Waves className="size-3.5" />}
-            />
-            <Metric
-              label="Total demand"
-              value={formatCompact(summary.demand)}
-              unit="m³/day"
-              icon={<Droplets className="size-3.5" />}
-            />
             <Metric
               label="Supply coverage"
               value={formatPercent(summary.coverage)}
@@ -117,6 +99,18 @@ export function MetricsBar({ network }: { network: NetworkState | null }) {
               icon={<Gauge className="size-3.5" />}
             />
             <Metric
+              label="Available supply"
+              value={formatCompact(summary.supply)}
+              unit="m³/day"
+              icon={<Waves className="size-3.5" />}
+            />
+            <Metric
+              label="Total demand"
+              value={formatCompact(summary.demand)}
+              unit="m³/day"
+              icon={<Droplets className="size-3.5" />}
+            />
+            <Metric
               label="Residents"
               value={formatPopulation(summary.population)}
               icon={<Users className="size-3.5" />}
@@ -124,7 +118,6 @@ export function MetricsBar({ network }: { network: NetworkState | null }) {
             <Metric
               label="Critical facilities"
               value={String(summary.facilities)}
-              tone="info"
               icon={<Hospital className="size-3.5" />}
             />
             <Metric
@@ -146,7 +139,7 @@ function MetricSkeleton() {
   return (
     <div className="animate-pulse">
       <div className="h-2.5 w-20 rounded bg-overlay" />
-      <div className="mt-2 h-5 w-14 rounded bg-overlay" />
+      <div className="mt-2.5 h-6 w-16 rounded bg-overlay" />
     </div>
   )
 }

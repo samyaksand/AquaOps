@@ -19,12 +19,26 @@ interface ParetoChartProps {
   candidates: Candidate[]
   frontierIds: Set<string>
   selectedId: string | null
+  compareId?: string | null
   onSelect: (candidateId: string) => void
+  onCompare?: (candidateId: string) => void
   /** The current (non-candidate) allocation's objectives, if available, shown
    * as a distinct reference marker so a decision-maker sees where "now"
    * sits relative to the explored trade-off space. */
   baseline?: ObjectiveScores | null
 }
+
+/** Common axis pairings worth one click rather than two dropdown changes —
+ * each names the trade-off it shows rather than just the two objectives. */
+const AXIS_PRESETS: {
+  label: string
+  x: keyof ObjectiveScores
+  y: keyof ObjectiveScores
+}[] = [
+  { label: 'Coverage vs Unmet', x: 'unmet_demand_score', y: 'critical_coverage' },
+  { label: 'Equity vs Efficiency', x: 'logistics_efficiency', y: 'equity' },
+  { label: 'Population vs Critical', x: 'population_served', y: 'critical_coverage' },
+]
 
 /**
  * The Pareto frontier scatter: the visual centerpiece of Decision Analysis.
@@ -37,7 +51,9 @@ export function ParetoChart({
   candidates,
   frontierIds,
   selectedId,
+  compareId,
   onSelect,
+  onCompare,
   baseline,
 }: ParetoChartProps) {
   const [xKey, setXKey] = useState<keyof ObjectiveScores>('unmet_demand_score')
@@ -92,13 +108,36 @@ export function ParetoChart({
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {AXIS_PRESETS.map((preset) => {
+          const active = preset.x === xKey && preset.y === yKey
+          return (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => {
+                setXKey(preset.x)
+                setYKey(preset.y)
+              }}
+              className={
+                active
+                  ? 'rounded-full bg-aqua-500/15 px-3 py-1.5 text-xs font-medium text-aqua-300 ring-1 ring-aqua-500/30'
+                  : 'rounded-full bg-raised px-3 py-1.5 text-xs text-ink-muted ring-1 ring-divider transition-colors hover:text-ink'
+              }
+            >
+              {preset.label}
+            </button>
+          )
+        })}
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <AxisPicker label="X axis" value={xKey} onChange={setXKey} options={axisOptions} />
         <AxisPicker label="Y axis" value={yKey} onChange={setYKey} options={axisOptions} />
         <span className="text-[11px] text-ink-subtle">
           {candidates.length} candidates
           {uniquePositions < candidates.length
-            ? ` · ${uniquePositions} distinct on this view (×N marks overlapping options)`
+            ? ` · ${uniquePositions} distinct (×N = overlapping)`
             : ''}
         </span>
         <Legend />
@@ -200,6 +239,8 @@ export function ParetoChart({
               const radius = isSelected ? 8 : isHovered ? 7 : isFrontier ? 6 : 4.5
               const clusterSize = clusterSizeByPoint(x, y)
 
+              const isComparing = candidate.candidate_id === compareId
+
               return (
                 <g key={candidate.candidate_id}>
                   {isSelected ? (
@@ -211,6 +252,17 @@ export function ParetoChart({
                       stroke="var(--color-aqua-300)"
                       strokeWidth="1.5"
                       strokeDasharray="3 3"
+                    />
+                  ) : null}
+                  {isComparing ? (
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={radius + 5}
+                      fill="none"
+                      stroke="var(--color-status-warn)"
+                      strokeWidth="1.5"
+                      strokeDasharray="2 3"
                     />
                   ) : null}
                   <circle
@@ -249,6 +301,14 @@ export function ParetoChart({
             x={hovered.x}
             y={hovered.y}
             isFrontier={frontierIds.has(hovered.candidate.candidate_id)}
+            canCompare={
+              !!onCompare &&
+              selectedId !== null &&
+              selectedId !== hovered.candidate.candidate_id
+            }
+            onCompare={() => {
+              if (onCompare) onCompare(hovered.candidate.candidate_id)
+            }}
           />
         ) : null}
       </div>
@@ -310,18 +370,22 @@ function ChartTooltip({
   x,
   y,
   isFrontier,
+  canCompare,
+  onCompare,
 }: {
   candidate: Candidate
   x: number
   y: number
   isFrontier: boolean
+  canCompare: boolean
+  onCompare: () => void
 }) {
   const leftPct = (x / WIDTH) * 100
   const topPct = (y / HEIGHT) * 100
   return (
     <div
       role="tooltip"
-      className="pointer-events-none absolute z-10 w-56 -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-lg border border-divider bg-depth/95 p-2.5 shadow-2xl backdrop-blur"
+      className="absolute z-10 w-56 -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-lg border border-divider bg-depth/95 p-2.5 shadow-2xl backdrop-blur"
       style={{ left: `${leftPct}%`, top: `${topPct}%` }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -348,7 +412,17 @@ function ChartTooltip({
           </div>
         ))}
       </dl>
-      <p className="mt-1.5 text-[10px] text-ink-subtle">Click to select</p>
+      {canCompare ? (
+        <button
+          type="button"
+          onClick={onCompare}
+          className="mt-2 w-full rounded-md bg-raised px-2 py-1.5 text-[11px] font-medium text-ink-muted transition-colors hover:bg-overlay hover:text-ink"
+        >
+          Compare with selected
+        </button>
+      ) : (
+        <p className="mt-1.5 text-[10px] text-ink-subtle">Click to select</p>
+      )}
     </div>
   )
 }

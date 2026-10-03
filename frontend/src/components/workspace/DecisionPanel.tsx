@@ -42,7 +42,7 @@ export function DecisionPanel({ network }: { network: NetworkState | null }) {
   return (
     <aside
       aria-label="Decision panel"
-      className="flex w-full shrink-0 flex-col gap-3 overflow-y-auto xl:w-80"
+      className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto"
     >
       <Panel>
         <PanelHeader
@@ -237,7 +237,7 @@ function DemandRow({
           </Badge>
         </div>
 
-        <div className="mt-2 flex items-center justify-between text-xs">
+        <div className="mt-2.5 flex items-center justify-between text-xs">
           <span className="tabular text-ink-muted">
             {formatVolume(point.demand_m3_per_day)}
             <span className="text-ink-subtle"> m³/day</span>

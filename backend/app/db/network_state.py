@@ -118,6 +118,7 @@ async def load_network_state(session: AsyncSession) -> NetworkState:
             priority_rank=priority_rank(zone.priority),
             population=zone.population,
             reserve_m3=zone.stored_volume_m3,
+            category=zone.zone_type.value,
         )
         for zone in sorted(zones, key=lambda item: item.code)
     ) + tuple(
@@ -130,6 +131,7 @@ async def load_network_state(session: AsyncSession) -> NetworkState:
             priority_rank=priority_rank(facility.priority),
             population=facility.service_population,
             reserve_m3=facility.backup_storage_m3,
+            category=facility.facility_type.value,
         )
         for facility in sorted(facilities, key=lambda item: item.code)
     )

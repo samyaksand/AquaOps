@@ -20,6 +20,12 @@ export function useDecisionAnalysis() {
   const selectedCandidateId = useDecisionStore(
     (state) => state.selectedCandidateId,
   )
+  const compareCandidateId = useDecisionStore(
+    (state) => state.compareCandidateId,
+  )
+  const setCompareCandidate = useDecisionStore(
+    (state) => state.setCompareCandidate,
+  )
   const baselineObjectives = useDecisionStore(
     (state) => state.baselineObjectives,
   )
@@ -88,6 +94,8 @@ export function useDecisionAnalysis() {
     error,
     analyzedScenario,
     selectedCandidateId,
+    compareCandidateId,
+    setCompareCandidate,
     baselineObjectives,
     normalAnalysis,
     analyze,

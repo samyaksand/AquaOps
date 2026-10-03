@@ -5,7 +5,7 @@ import { IconButton } from '@/components/ui/Button'
 import { useAppStore } from '@/store/useAppStore'
 import { PRIORITY_LABELS } from '@/types/network'
 
-import { KIND_COLORS } from './glyphs'
+import { iconFor } from './icons'
 import { KIND_LABELS, describeEdge, type MapModel } from './model'
 
 const PRIORITY_TONES = ['critical', 'warn', 'info', 'neutral'] as const
@@ -21,36 +21,35 @@ export function NodeDetails({ model }: { model: MapModel }) {
   const connections = model.edges.filter(
     (edge) => edge.sourceCode === entity.code || edge.targetCode === entity.code,
   )
+  const Icon = iconFor(entity.kind, entity.category)
 
   return (
-    <div className="absolute top-3 left-3 w-72 overflow-hidden rounded-lg border border-divider bg-depth/95 shadow-2xl backdrop-blur">
-      <header className="flex items-start gap-2 border-b border-hairline px-3 py-2.5">
-        <span
-          aria-hidden="true"
-          className="mt-1 size-2.5 shrink-0 rounded-sm"
-          style={{ backgroundColor: KIND_COLORS[entity.kind] }}
-        />
+    <div
+      className="rise-in absolute top-4 left-4 w-80 overflow-hidden rounded-xl border border-divider bg-depth/95 backdrop-blur"
+      style={{ boxShadow: 'var(--shadow-lift)' }}
+    >
+      <header className="flex items-start gap-3 border-b border-hairline px-4 py-3.5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-raised text-ink-muted ring-1 ring-divider">
+          <Icon className="size-4.5" aria-hidden="true" />
+        </span>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-medium tracking-wide text-ink-subtle uppercase">
             {KIND_LABELS[entity.kind]}
           </p>
-          <h3 className="truncate text-sm font-semibold text-ink">
+          <h3 className="truncate text-[15px] font-semibold text-ink">
             {entity.name}
           </h3>
-          <p className="tabular mt-0.5 font-mono text-[10px] text-ink-subtle">
-            {entity.code}
-          </p>
         </div>
         <IconButton
           label="Close details"
           onClick={() => select(null)}
-          className="size-6"
+          className="size-7"
         >
           <X className="size-3.5" />
         </IconButton>
       </header>
 
-      <div className="flex flex-wrap items-center gap-1.5 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-2.5">
         <StatusBadge state={entity.state} />
         {entity.priorityRank !== null ? (
           <Badge tone={PRIORITY_TONES[entity.priorityRank] ?? 'neutral'}>
@@ -63,7 +62,7 @@ export function NodeDetails({ model }: { model: MapModel }) {
         {entity.details.map((row) => (
           <div
             key={row.label}
-            className="flex items-baseline justify-between gap-3 px-3 py-1.5"
+            className="flex items-baseline justify-between gap-3 px-4 py-2"
           >
             <dt className="text-xs text-ink-subtle">{row.label}</dt>
             <dd className="tabular text-xs font-medium text-ink">
@@ -75,20 +74,20 @@ export function NodeDetails({ model }: { model: MapModel }) {
 
       {connections.length > 0 ? (
         <section className="border-t border-hairline">
-          <h4 className="px-3 pt-2 text-[10px] font-medium tracking-wide text-ink-subtle uppercase">
+          <h4 className="px-4 pt-3 text-[10px] font-medium tracking-wide text-ink-subtle uppercase">
             Connections ({connections.length})
           </h4>
-          <ul className="max-h-40 overflow-y-auto px-3 pt-1 pb-2.5">
+          <ul className="max-h-44 overflow-y-auto px-2.5 pt-1.5 pb-3">
             {connections.map((edge) => {
               const isOutbound = edge.sourceCode === entity.code
               const otherCode = isOutbound ? edge.targetCode : edge.sourceCode
               const other = model.byCode[otherCode]
               return (
-                <li key={edge.code} className="py-1">
+                <li key={edge.code}>
                   <button
                     type="button"
                     onClick={() => select(otherCode)}
-                    className="w-full rounded px-1 py-0.5 text-left transition-colors hover:bg-raised"
+                    className="w-full rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-raised"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-xs text-ink-muted">

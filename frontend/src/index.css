@@ -7,42 +7,92 @@
   recedes so that network state and allocation data carry the colour. Status
   hues are reserved exclusively for operational meaning — never decoration —
   so an operator can read severity without reading labels.
+
+  The accent is used sparingly: one primary action per view, selection
+  states, and live/flow indicators. Everywhere else leans on the ink and
+  surface ramps, so the aqua reads as "this matters" rather than wallpaper.
 */
 @theme {
   /* Surfaces, darkest to lightest */
-  --color-abyss: #070b14;
-  --color-depth: #0b1120;
-  --color-surface: #111a2e;
-  --color-raised: #16213a;
-  --color-overlay: #1d2b48;
+  --color-abyss: #05070d;
+  --color-depth: #0a0e18;
+  --color-surface: #10151f;
+  --color-raised: #161c29;
+  --color-overlay: #1d2534;
 
   /* Lines */
-  --color-hairline: #1e2d4a;
-  --color-divider: #27395c;
+  --color-hairline: #1b2230;
+  --color-divider: #262f42;
 
   /* Text */
-  --color-ink: #f1f6fd;
-  --color-ink-muted: #9fb3d1;
-  --color-ink-subtle: #64789a;
+  --color-ink: #f3f6fb;
+  --color-ink-muted: #a3afc4;
+  --color-ink-subtle: #6b7589;
 
-  /* Water accent */
-  --color-aqua-300: #7ee7f5;
-  --color-aqua-400: #38d3ea;
-  --color-aqua-500: #11b6d4;
-  --color-aqua-600: #0891ae;
+  /* Water accent — reserved for primary actions, selection, and live state */
+  --color-aqua-300: #8fe3ec;
+  --color-aqua-400: #45c9dc;
+  --color-aqua-500: #1fa8c0;
+  --color-aqua-600: #15839a;
 
   /* Operational status */
-  --color-status-ok: #34d399;
-  --color-status-warn: #fbbf24;
-  --color-status-critical: #f87171;
-  --color-status-offline: #64789a;
-  --color-status-info: #818cf8;
+  --color-status-ok: #3dd68c;
+  --color-status-warn: #f0b429;
+  --color-status-critical: #f0665e;
+  --color-status-offline: #6b7589;
+  --color-status-info: #8b93f0;
 
   --font-sans: 'Inter var', 'Inter', system-ui, -apple-system, 'Segoe UI',
     sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
 
-  --radius-panel: 0.75rem;
+  --radius-panel: 1rem;
+  --radius-field: 0.625rem;
+
+  /* Elevation — a single soft shadow ramp for raised surfaces (popovers,
+     selected cards, the inspected-candidate panel), never decorative. */
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.35), 0 24px 56px -12px rgba(0, 0, 0, 0.55);
+}
+
+/*
+  Light theme — a deliberate second palette, not an inverted dark theme.
+  Surfaces are a cool, slightly blue-tinted off-white (water, not paper);
+  status/aqua hues are re-stepped one or two notches darker/more saturated
+  than their dark-mode values so they hold WCAG-AA contrast on a light
+  surface instead of just being reused verbatim. Applied via
+  `:root[data-theme="light"]` so every existing `bg-abyss`/`text-ink`/etc.
+  utility repaints with no component changes — see useThemeStore.
+*/
+:root[data-theme='light'] {
+  --color-abyss: #f3f6fb;
+  --color-depth: #ffffff;
+  --color-surface: #ffffff;
+  --color-raised: #eef1f7;
+  --color-overlay: #e4e9f2;
+
+  --color-hairline: #dde2ec;
+  --color-divider: #c7cedd;
+
+  --color-ink: #121722;
+  --color-ink-muted: #4b566b;
+  --color-ink-subtle: #76829a;
+
+  --color-aqua-300: #0e8fa6;
+  --color-aqua-400: #0d7b90;
+  --color-aqua-500: #0a6578;
+  --color-aqua-600: #084f5e;
+
+  --color-status-ok: #1a9c63;
+  --color-status-warn: #a66900;
+  --color-status-critical: #d4392f;
+  --color-status-offline: #76829a;
+  --color-status-info: #4850c4;
+
+  --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 28px -8px rgba(16, 24, 40, 0.1);
+  --shadow-lift: 0 2px 6px rgba(16, 24, 40, 0.08), 0 24px 48px -12px rgba(16, 24, 40, 0.14);
+
+  color-scheme: light;
 }
 
 @layer base {
@@ -62,6 +112,7 @@
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   /* Numeric data must align across rows to stay scannable. */
@@ -104,4 +155,28 @@
 
 .map-flow-line {
   animation: map-flow 1.1s linear infinite;
+}
+
+/* A restrained fade-up used for content that appears after a load/select —
+   never on persistent chrome, so motion reads as "new" rather than busy. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: rise-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise-in,
+  .map-flow-line {
+    animation: none;
+  }
 }

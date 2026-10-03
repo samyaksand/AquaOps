@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 
 import { allocateScenario, applyScenario, describeError } from '@/lib/api'
 import { useScenarioStore } from '@/store/useScenarioStore'
-import type { ScenarioIn, StrategyName } from '@/types/network'
+import type { ScenarioChangeIn, ScenarioIn, StrategyName } from '@/types/network'
 
 /**
  * Drives the scenario workflow against the existing scenario endpoints.
@@ -31,32 +31,43 @@ export function useScenario() {
   const setAllocated = useScenarioStore((state) => state.setAllocated)
   const reset = useScenarioStore((state) => state.reset)
 
-  const buildScenario = useCallback((): ScenarioIn => ({
-    name,
-    description,
-    changes: drafts.map((draft) => draft.change),
-  }), [name, description, drafts])
+  const buildScenario = useCallback(
+    (changesOverride?: ScenarioChangeIn[]): ScenarioIn => ({
+      name,
+      description,
+      changes: changesOverride ?? drafts.map((draft) => draft.change),
+    }),
+    [name, description, drafts],
+  )
 
-  const apply = useCallback(async () => {
-    setApplying(true)
-    try {
-      const scenario = buildScenario()
-      const disrupted = await applyScenario(scenario)
-      setApplied(disrupted, {
-        name: scenario.name,
-        description: scenario.description ?? '',
-        changes: drafts.map((draft) => draft.change.type),
-      })
-    } catch (caught) {
-      setApplyError(describeError(caught))
-    }
-  }, [buildScenario, drafts, setApplied, setApplying, setApplyError])
+  // `changesOverride` lets a caller that just mutated the store in the same
+  // tick (e.g. Demo Mode adding a draft then immediately applying) pass the
+  // fresh list directly, instead of this hook's own `drafts` — which still
+  // reflects the render this closure was created in, not the just-written
+  // store state.
+  const apply = useCallback(
+    async (changesOverride?: ScenarioChangeIn[]) => {
+      setApplying(true)
+      try {
+        const scenario = buildScenario(changesOverride)
+        const disrupted = await applyScenario(scenario)
+        setApplied(disrupted, {
+          name: scenario.name,
+          description: scenario.description ?? '',
+          changes: scenario.changes.map((change) => change.type),
+        })
+      } catch (caught) {
+        setApplyError(describeError(caught))
+      }
+    },
+    [buildScenario, setApplied, setApplying, setApplyError],
+  )
 
   const reallocate = useCallback(
-    async (strategy: StrategyName) => {
+    async (strategy: StrategyName, changesOverride?: ScenarioChangeIn[]) => {
       setReallocating(true)
       try {
-        const scenario = buildScenario()
+        const scenario = buildScenario(changesOverride)
         const result = await allocateScenario(scenario, strategy)
         setAllocated(result.network, result.scenario, result.allocation)
       } catch (caught) {
