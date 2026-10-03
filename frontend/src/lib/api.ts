@@ -4,6 +4,8 @@ import type {
   AllocationResult,
   Geography,
   NetworkState,
+  ScenarioAllocationResult,
+  ScenarioIn,
   StrategyName,
 } from '@/types/network'
 
@@ -21,6 +23,22 @@ export async function runAllocation(
   strategy: StrategyName,
 ): Promise<AllocationResult> {
   const { data } = await api.post<AllocationResult>('/allocate', { strategy })
+  return data
+}
+
+export async function applyScenario(scenario: ScenarioIn): Promise<NetworkState> {
+  const { data } = await api.post<NetworkState>('/scenarios/apply', scenario)
+  return data
+}
+
+export async function allocateScenario(
+  scenario: ScenarioIn,
+  strategy: StrategyName,
+): Promise<ScenarioAllocationResult> {
+  const { data } = await api.post<ScenarioAllocationResult>(
+    '/scenarios/allocate',
+    { scenario, strategy },
+  )
   return data
 }
 

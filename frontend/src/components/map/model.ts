@@ -68,12 +68,24 @@ export interface MapEdge {
   flowM3PerDay: number
 }
 
+export interface TankerTether {
+  tankerCode: string
+  /** Nearest non-tanker node, used only to anchor the tanker visually. */
+  hubCode: string
+}
+
 export interface MapModel {
   entities: MapEntity[]
   byCode: Record<string, MapEntity>
   edges: MapEdge[]
   /** True once an allocation result has been folded into this model. */
   hasAllocation: boolean
+  /**
+   * Tankers are mobile and carry no pipeline connection. A tether just
+   * anchors each one to its nearest node so it doesn't read as orphaned —
+   * it is not a real pipeline and never implies a routed allocation.
+   */
+  tankerTethers: TankerTether[]
 }
 
 const num = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
@@ -203,10 +215,17 @@ export function buildMapModel(
       layer: KIND_LAYER.tanker,
       state: tanker.state,
       base,
-      headline: `${num.format(tanker.capacity_m3 * tanker.trips_per_day)} m³/day haulage`,
+      headline:
+        tanker.state === 'unavailable'
+          ? 'Out of service'
+          : `Standby · ${num.format(tanker.capacity_m3 * tanker.trips_per_day)} m³/day haulage`,
       priorityRank: null,
       allocation: null,
       details: [
+        {
+          label: 'Status',
+          value: tanker.state === 'unavailable' ? 'Out of service' : 'Standby',
+        },
         { label: 'Capacity', value: `${num.format(tanker.capacity_m3)} m³` },
         { label: 'Trips per day', value: String(tanker.trips_per_day) },
         { label: 'Daily haulage', value: `${num.format(tanker.capacity_m3 * tanker.trips_per_day)} m³` },
@@ -241,6 +260,31 @@ export function buildMapModel(
     }
   }
 
+  // Tankers are mobile and never appear as pipeline endpoints, so each one
+  // is tethered to whichever node sits physically closest to it. This is a
+  // presentation anchor only — it is not a routed allocation path.
+  const nonTankerEntities = entities.filter((entity) => entity.kind !== 'tanker')
+  const tankerTethers: TankerTether[] = []
+  for (const tanker of network.tankers) {
+    const base = points[tanker.code]
+    if (!base) continue
+    let nearest: MapEntity | null = null
+    let nearestDistance = Infinity
+    for (const candidate of nonTankerEntities) {
+      const distance = Math.hypot(
+        candidate.base.x - base.x,
+        candidate.base.y - base.y,
+      )
+      if (distance < nearestDistance) {
+        nearestDistance = distance
+        nearest = candidate
+      }
+    }
+    if (nearest) {
+      tankerTethers.push({ tankerCode: tanker.code, hubCode: nearest.code })
+    }
+  }
+
   const edges: MapEdge[] = network.links
     .filter(
       (link) => byCode[link.source_code] && byCode[link.target_code],
@@ -255,7 +299,13 @@ export function buildMapModel(
       flowM3PerDay: flowByLinkCode[link.code] ?? 0,
     }))
 
-  return { entities, byCode, edges, hasAllocation: allocation !== null }
+  return {
+    entities,
+    byCode,
+    edges,
+    hasAllocation: allocation !== null,
+    tankerTethers,
+  }
 }
 
 export function describeEdge(edge: MapEdge): DetailRow[] {

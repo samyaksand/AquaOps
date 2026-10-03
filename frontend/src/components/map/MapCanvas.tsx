@@ -285,6 +285,30 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
           </g>
         ) : null}
 
+        {layers.tankers
+          ? model.tankerTethers.map((tether) => {
+              const tanker = model.byCode[tether.tankerCode]
+              const hub = model.byCode[tether.hubCode]
+              if (!tanker || !hub || !layers[hub.layer]) return null
+              const a = positionOf(tanker)
+              const b = positionOf(hub)
+              return (
+                <line
+                  key={tether.tankerCode}
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke="var(--color-status-warn)"
+                  strokeWidth="1"
+                  strokeDasharray="2 4"
+                  strokeLinecap="round"
+                  opacity="0.35"
+                />
+              )
+            })
+          : null}
+
         {visible.map((entity) => {
           const position = positionOf(entity)
           const isHovered = hovered === entity.code
@@ -380,7 +404,7 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
 
               {layers.labels ? (
                 <text
-                  y={radius + 15}
+                  y={radius + 16}
                   textAnchor="middle"
                   className="pointer-events-none"
                   fontSize="11"
@@ -392,7 +416,7 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
                   }
                   paintOrder="stroke"
                   stroke="var(--color-abyss)"
-                  strokeWidth="3.5"
+                  strokeWidth="4.5"
                   strokeLinejoin="round"
                 >
                   {entity.name}

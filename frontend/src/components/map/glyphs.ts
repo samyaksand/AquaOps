@@ -19,11 +19,11 @@ export const STATE_RING: Record<OperationalState, string> = {
 }
 
 export const KIND_RADIUS: Record<EntityKind, number> = {
-  reservoir: 15,
-  plant: 13,
-  zone: 14,
-  facility: 12,
-  tanker: 9,
+  reservoir: 17,
+  plant: 15,
+  zone: 16,
+  facility: 14,
+  tanker: 10,
 }
 
 /**

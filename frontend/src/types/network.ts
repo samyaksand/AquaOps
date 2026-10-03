@@ -147,3 +147,106 @@ export interface AllocationResult {
   allocations: DemandAllocation[]
   source_withdrawals: SourceWithdrawal[]
 }
+
+/** Mirrors the backend's `ScenarioChangeIn` discriminated union. */
+export type ScenarioChangeType =
+  | 'reduce_reservoir_supply'
+  | 'reduce_treatment_capacity'
+  | 'reduce_pipeline_capacity'
+  | 'set_pipeline_unavailable'
+  | 'change_zone_demand'
+  | 'change_facility_demand'
+  | 'set_tanker_unavailable'
+
+export interface ReduceReservoirSupplyIn {
+  type: 'reduce_reservoir_supply'
+  target_code: string
+  fraction: number
+}
+
+export interface ReduceTreatmentCapacityIn {
+  type: 'reduce_treatment_capacity'
+  target_code: string
+  fraction: number
+}
+
+export interface ReducePipelineCapacityIn {
+  type: 'reduce_pipeline_capacity'
+  target_code: string
+  fraction: number
+}
+
+export interface SetPipelineUnavailableIn {
+  type: 'set_pipeline_unavailable'
+  target_code: string
+}
+
+export interface ChangeZoneDemandIn {
+  type: 'change_zone_demand'
+  target_code: string
+  factor: number
+}
+
+export interface ChangeFacilityDemandIn {
+  type: 'change_facility_demand'
+  target_code: string
+  factor: number
+}
+
+export interface SetTankerUnavailableIn {
+  type: 'set_tanker_unavailable'
+  target_code: string
+}
+
+export type ScenarioChangeIn =
+  | ReduceReservoirSupplyIn
+  | ReduceTreatmentCapacityIn
+  | ReducePipelineCapacityIn
+  | SetPipelineUnavailableIn
+  | ChangeZoneDemandIn
+  | ChangeFacilityDemandIn
+  | SetTankerUnavailableIn
+
+export const SCENARIO_CHANGE_LABELS: Record<ScenarioChangeType, string> = {
+  reduce_reservoir_supply: 'Reduce reservoir supply',
+  reduce_treatment_capacity: 'Reduce treatment capacity',
+  reduce_pipeline_capacity: 'Reduce pipeline capacity',
+  set_pipeline_unavailable: 'Take pipeline offline',
+  change_zone_demand: 'Change zone demand',
+  change_facility_demand: 'Change facility demand',
+  set_tanker_unavailable: 'Take tanker out of service',
+}
+
+/** Which entity collection a scenario change type targets. */
+export const SCENARIO_CHANGE_TARGET_KIND: Record<
+  ScenarioChangeType,
+  'source' | 'transit' | 'link' | 'zone' | 'facility' | 'tanker'
+> = {
+  reduce_reservoir_supply: 'source',
+  reduce_treatment_capacity: 'transit',
+  reduce_pipeline_capacity: 'link',
+  set_pipeline_unavailable: 'link',
+  change_zone_demand: 'zone',
+  change_facility_demand: 'facility',
+  set_tanker_unavailable: 'tanker',
+}
+
+export interface ScenarioIn {
+  name: string
+  description?: string
+  changes: ScenarioChangeIn[]
+}
+
+/** Mirrors `ScenarioSummaryOut`: an echo of the applied scenario. */
+export interface ScenarioSummary {
+  name: string
+  description: string
+  changes: string[]
+}
+
+/** Mirrors `ScenarioAllocationOut` at POST /api/v1/scenarios/allocate. */
+export interface ScenarioAllocationResult {
+  scenario: ScenarioSummary
+  network: NetworkState
+  allocation: AllocationResult
+}
