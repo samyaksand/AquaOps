@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api import allocation, network, scenarios
+from app.api import allocation, network, scenarios, websocket
 
 router = APIRouter()
 
@@ -16,3 +16,4 @@ async def health_check() -> dict[str, str]:
 router.include_router(network.router)
 router.include_router(allocation.router)
 router.include_router(scenarios.router)
+router.include_router(websocket.router)
