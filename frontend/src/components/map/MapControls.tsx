@@ -95,9 +95,15 @@ function LayerMenu() {
 
 export function MapHint() {
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1.5 rounded-md border border-hairline bg-depth/80 px-2 py-1 backdrop-blur">
-      <Maximize2 className="size-3 text-ink-subtle" aria-hidden="true" />
-      <span className="text-[10px] text-ink-subtle">
+    <div
+      className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1.5 rounded-md border border-hairline bg-depth/80 px-2 py-1 backdrop-blur"
+      title="Drag nodes to rearrange · scroll to zoom · view only"
+    >
+      <Maximize2 className="size-3 shrink-0 text-ink-subtle" aria-hidden="true" />
+      {/* Collapses to icon-only on narrow viewports/panels — a full-width
+          hint chip can otherwise sit directly over a node label near the
+          bottom-left corner of a smaller map (see CLAUDE.md, Network Map). */}
+      <span className="hidden text-[10px] text-ink-subtle sm:inline">
         Drag nodes to rearrange · scroll to zoom · view only
       </span>
     </div>

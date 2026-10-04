@@ -19,10 +19,11 @@ import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/States'
 import { useScenario } from '@/hooks/useScenario'
 import { buildNameIndex, linkLabel, nameFor } from '@/lib/labels'
-import { formatPercent, formatVolume } from '@/lib/format'
+import { formatCompact, formatPercent, formatVolume } from '@/lib/format'
 import { useAppStore } from '@/store/useAppStore'
 import { useScenarioStore } from '@/store/useScenarioStore'
 import {
+  PRIORITY_LABELS,
   SCENARIO_CHANGE_LABELS,
   SCENARIO_CHANGE_TARGET_KIND,
   STRATEGY_LABELS,
@@ -58,7 +59,13 @@ function defaultChange(
 }
 
 /** Target options for a change type, drawn from the live network — pipeline
- * targets show "Source → Destination" by name, never the link code. */
+ * targets show "Source → Destination" by name, never the link code. Each
+ * label is suffixed with one real, already-known number (supply, capacity,
+ * or demand) so a user can see roughly how large a target is before picking
+ * it — never a derived "impact score", just the plain figure the network
+ * already reports for it. Sorted largest-first within each kind so the
+ * targets most likely to matter surface before small, easy-to-miss ones.
+ */
 function targetsFor(
   type: ScenarioChangeType,
   network: NetworkState | null,
@@ -68,22 +75,42 @@ function targetsFor(
   const kind = SCENARIO_CHANGE_TARGET_KIND[type]
   switch (kind) {
     case 'source':
-      return network.sources.map((s) => ({ value: s.code, label: s.name }))
+      return [...network.sources]
+        .sort((a, b) => b.available_m3_per_day - a.available_m3_per_day)
+        .map((s) => ({
+          value: s.code,
+          label: `${s.name} — ${formatCompact(s.available_m3_per_day)} m³/d`,
+        }))
     case 'transit':
-      return network.transits.map((t) => ({ value: t.code, label: t.name }))
+      return [...network.transits]
+        .sort((a, b) => b.capacity_m3_per_day - a.capacity_m3_per_day)
+        .map((t) => ({
+          value: t.code,
+          label: `${t.name} — ${formatCompact(t.capacity_m3_per_day)} m³/d`,
+        }))
     case 'link':
-      return network.links.map((l) => ({
-        value: l.code,
-        label: linkLabel(names, l.source_code, l.target_code),
-      }))
+      return [...network.links]
+        .sort((a, b) => b.capacity_m3_per_day - a.capacity_m3_per_day)
+        .map((l) => ({
+          value: l.code,
+          label: `${linkLabel(names, l.source_code, l.target_code)} — ${formatCompact(l.capacity_m3_per_day)} m³/d`,
+        }))
     case 'zone':
-      return network.demands
+      return [...network.demands]
         .filter((d) => d.kind === 'zone')
-        .map((d) => ({ value: d.code, label: d.name }))
+        .sort((a, b) => b.demand_m3_per_day - a.demand_m3_per_day)
+        .map((d) => ({
+          value: d.code,
+          label: `${d.name} — ${formatCompact(d.demand_m3_per_day)} m³/d`,
+        }))
     case 'facility':
-      return network.demands
+      return [...network.demands]
         .filter((d) => d.kind === 'facility')
-        .map((d) => ({ value: d.code, label: d.name }))
+        .sort((a, b) => a.priority_rank - b.priority_rank || b.demand_m3_per_day - a.demand_m3_per_day)
+        .map((d) => ({
+          value: d.code,
+          label: `${d.name} — ${PRIORITY_LABELS[d.priority_rank] ?? 'Unranked'}`,
+        }))
     case 'tanker':
       return network.tankers.map((t) => ({ value: t.code, label: t.name }))
   }
@@ -215,8 +242,9 @@ export function ScenarioPanel({ network }: { network: NetworkState | null }) {
             </p>
           ) : (
             <p className="text-[11px] text-ink-subtle">
-              Adds a change against {targets[0]?.label} — pick the exact asset
-              below.
+              Adds a change against the largest eligible target first (shown
+              below) — every asset stays selectable if you'd rather pick a
+              smaller one.
             </p>
           )}
 

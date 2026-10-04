@@ -16,7 +16,7 @@ import {
 const TITLES: Record<ViewId, { title: string; subtitle: string }> = {
   overview: {
     title: 'Overview',
-    subtitle: 'Current network posture and headline metrics',
+    subtitle: 'Decide how Rivertown shares water under pressure',
   },
   network: {
     title: 'Network',

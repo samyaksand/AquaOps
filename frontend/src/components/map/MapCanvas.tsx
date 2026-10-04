@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { WORLD, type Point } from '@/lib/projection'
 import { useAppStore } from '@/store/useAppStore'
@@ -61,6 +61,13 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
   const [panning, setPanning] = useState(false)
   // Tracks an in-flight gesture so a drag does not also fire a click.
   const gesture = useRef<{ code: string | null; moved: boolean } | null>(null)
+
+  // Read by the native (non-passive) wheel listener below, which can't close
+  // over fresh zoom/pan without re-subscribing on every frame.
+  const zoomRef = useRef(zoom)
+  const panRef = useRef(pan)
+  zoomRef.current = zoom
+  panRef.current = pan
 
   /** Current position of an entity: projected base plus any drag offset. */
   const positionOf = useCallback(
@@ -171,22 +178,35 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
     window.addEventListener('pointerup', up)
   }
 
-  const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
+  // React's onWheel attaches a passive listener, so calling preventDefault()
+  // inside it throws "Unable to preventDefault inside passive event listener
+  // invocation" on every scroll — a real console error, not just noise.
+  // Attaching the listener natively with { passive: false } is the only way
+  // to actually suppress page-scroll while zooming the map.
+  useEffect(() => {
     const svg = svgRef.current
     if (!svg) return
-    event.preventDefault()
-    const factor = Math.exp(-event.deltaY * 0.0015)
-    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor))
-    if (next === zoom) return
 
-    // Keep the point under the cursor fixed while zooming.
-    const cursor = toViewBox(svg, event.clientX, event.clientY)
-    const scale = next / zoom
-    setZoom(next, {
-      x: cursor.x - (cursor.x - pan.x) * scale,
-      y: cursor.y - (cursor.y - pan.y) * scale,
-    })
-  }
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      const factor = Math.exp(-event.deltaY * 0.0015)
+      const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomRef.current * factor))
+      if (next === zoomRef.current) return
+
+      const cursor = toViewBox(svg, event.clientX, event.clientY)
+      const scale = next / zoomRef.current
+      setZoom(next, {
+        x: cursor.x - (cursor.x - panRef.current.x) * scale,
+        y: cursor.y - (cursor.y - panRef.current.y) * scale,
+      })
+    }
+
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', onWheel)
+    // zoom/pan are read via refs inside the handler so this effect never
+    // needs to re-subscribe on every zoom/pan change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setZoom])
 
   return (
     <svg
@@ -198,7 +218,6 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
         panning ? 'cursor-grabbing' : 'cursor-grab',
       )}
       onPointerDown={handleBackgroundPointerDown}
-      onWheel={handleWheel}
       role="img"
       aria-label="Rivertown water network map"
     >

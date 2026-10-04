@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { ErrorState, LoadingState } from '@/components/ui/States'
 import { useGeography } from '@/hooks/useGeography'
 import type { Point } from '@/lib/projection'
+import { useAppStore } from '@/store/useAppStore'
 import type { AllocationResult, NetworkState } from '@/types/network'
 
 import { MapCanvas } from './MapCanvas'
@@ -31,6 +32,7 @@ export function NetworkMap({
     entity: MapEntity
     screen: Point
   } | null>(null)
+  const selectedNodeCode = useAppStore((state) => state.selectedNodeCode)
 
   const model = useMemo(
     () =>
@@ -59,7 +61,7 @@ export function NetworkMap({
       <NodeDetails model={model} />
       <MapControls />
       <MapHint />
-      {hover ? (
+      {hover && hover.entity.code !== selectedNodeCode ? (
         <MapTooltip entity={hover.entity} screen={hover.screen} />
       ) : null}
     </div>
