@@ -145,7 +145,7 @@ as plain, unpersisted containers here.
 | PostgreSQL + PostGIS (the network, allocations persisted to it, everything `app/db/seed.py` creates) | Supabase | **No** — the VM never holds this database; see §8.1 |
 | Application/infrastructure code | Git (GitHub or wherever `origin` is hosted) | No — `git clone` recovers it in full |
 | `backend/.env.production` (real production secrets) | Wherever it is stored outside the repo (see §8.3) — **not** this VM alone, **not** Git | **Yes, if it has no copy elsewhere** — see §8.3 |
-| Redis cache, Kafka topics (this VM's containers) | Only on the VM, unpersisted | Yes — but see §8.1: this is short-TTL/relay data the backend already treats as best-effort, never authoritative, so its loss is not a data-loss event |
+| Redis cache, Kafka topics (this VM's containers) | Only on the VM, unpersisted | Yes — but see §8.1: this is short-TTL/relay data the backend already treats as best-effort, never authoritative, so its loss is not a data-loss event. The practical effect of a restart mid-operation is narrower than "data loss" implies: it can drop a live WebSocket broadcast to already-connected clients for whichever allocation/scenario result was in flight through the Kafka→Redis relay at that moment — the allocation itself and its direct HTTP/WebSocket response to the client that requested it are computed synchronously and are never affected. |
 | Docker named volumes on this VM | — | N/A — this production Compose file defines **no** named volumes; nothing here is a database backup |
 
 ### 8.1 Database — Supabase, not the VM

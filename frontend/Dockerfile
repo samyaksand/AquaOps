@@ -20,7 +20,12 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-FROM nginx:1.27-alpine AS serve
+# The unprivileged variant runs the master process as a non-root user out
+# of the box (correct ownership on its own directories already set up by
+# the image) rather than needing a manual USER + permission dance on top of
+# the standard nginx image — it already listens on 8080 by default, which
+# matches nginx.conf.
+FROM nginxinc/nginx-unprivileged:1.27-alpine AS serve
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf

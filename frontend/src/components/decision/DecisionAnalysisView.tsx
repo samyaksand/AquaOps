@@ -1,4 +1,4 @@
-import { BarChart3, RotateCcw, ScatterChart, Sparkles } from 'lucide-react'
+import { BarChart3, Info, RotateCcw, ScatterChart, Sparkles } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { Badge } from '@/components/ui/Badge'
@@ -7,8 +7,9 @@ import { Panel, PanelBody, PanelHeader } from '@/components/ui/Card'
 import { EmptyState, ErrorState, Spinner } from '@/components/ui/States'
 import { useDecisionAnalysis } from '@/hooks/useDecisionAnalysis'
 import { useAppStore } from '@/store/useAppStore'
+import { selectedCandidate } from '@/store/useDecisionStore'
 import { useScenarioStore } from '@/store/useScenarioStore'
-import type { NetworkState } from '@/types/network'
+import { OBJECTIVE_KEYS, type Candidate, type NetworkState } from '@/types/network'
 
 import { CandidateComparison } from './CandidateComparison'
 import { CandidateDetails } from './CandidateDetails'
@@ -61,10 +62,7 @@ export function DecisionAnalysisView({
     [analysis],
   )
   const selected = useMemo(
-    () =>
-      analysis?.candidates.find(
-        (c) => c.candidate_id === selectedCandidateId,
-      ) ?? null,
+    () => selectedCandidate({ analysis, selectedCandidateId }),
     [analysis, selectedCandidateId],
   )
   const comparing = useMemo(
@@ -76,6 +74,18 @@ export function DecisionAnalysisView({
   )
 
   const canUseScenario = scenarioMode === 'scenario' && scenarioDrafts.length > 0
+
+  // How many genuinely distinct outcomes the whole weight grid produced —
+  // across all five objectives, not just whichever two axes are plotted.
+  // The grid samples the engine's one real weighted lever; when the network
+  // has one dominant bottleneck, many weight combinations land on the exact
+  // same allocation, which is a real property of this network, not a
+  // rendering gap. Rounding to 3dp absorbs float noise from independently
+  // computed Decimal ratios without hiding a genuine difference.
+  const distinctOutcomeCount = useMemo(
+    () => (analysis ? countDistinctOutcomes(analysis.candidates) : 0),
+    [analysis],
+  )
 
   const handleInspect = () => {
     if (!selected) return
@@ -151,10 +161,24 @@ export function DecisionAnalysisView({
           <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
             <Panel className="flex min-h-0 flex-col">
               <PanelHeader
-                title="Pareto frontier"
-                subtitle="Every point is a real allocation — hover for its numbers, click to select it"
+                title="Trade-off chart (Pareto frontier)"
+                subtitle="Every point is a real allocation. The highlighted ones can't be improved on one measure without giving up another — hover for numbers, click to select"
                 icon={<ScatterChart className="size-4" />}
               />
+              {distinctOutcomeCount > 0 && distinctOutcomeCount < analysis.candidates.length ? (
+                <div className="mx-4 mt-3 flex items-start gap-2 rounded-xl border border-hairline bg-raised/40 px-3 py-2.5">
+                  <Info className="mt-0.5 size-3.5 shrink-0 text-aqua-400" aria-hidden="true" />
+                  <p className="text-[12px] leading-relaxed text-ink-muted">
+                    {analysis.candidates.length} weight combinations produced only{' '}
+                    <span className="font-semibold text-ink">
+                      {distinctOutcomeCount} distinct outcome{distinctOutcomeCount === 1 ? '' : 's'}
+                    </span>
+                    . One part of the network is the binding constraint, so many
+                    strategies converge on the same allocation — the trade-off
+                    is real, just narrower here than the grid size suggests.
+                  </p>
+                </div>
+              ) : null}
               <PanelBody className="min-h-0 flex-1">
                 <ParetoChart
                   candidates={analysis.candidates}
@@ -274,4 +298,17 @@ function Toolbar({
       </div>
     </div>
   )
+}
+
+/** Counts allocations that are genuinely different across all five
+ * objectives (not just the two currently plotted) — rounded to 3 decimal
+ * places so independently-computed Decimal ratios that are mathematically
+ * tied don't register as spuriously distinct. */
+function countDistinctOutcomes(candidates: Candidate[]): number {
+  const seen = new Set<string>()
+  for (const candidate of candidates) {
+    const key = OBJECTIVE_KEYS.map((k) => candidate.objectives[k].toFixed(3)).join(',')
+    seen.add(key)
+  }
+  return seen.size
 }

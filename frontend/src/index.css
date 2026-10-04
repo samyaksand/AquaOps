@@ -27,7 +27,10 @@
   /* Text */
   --color-ink: #f3f6fb;
   --color-ink-muted: #a3afc4;
-  --color-ink-subtle: #6b7589;
+  /* WCAG AA (4.5:1) against every surface this text sits on — #6b7589 only
+     cleared 3.9–4.4:1 and this color carries help/description copy
+     throughout the app. */
+  --color-ink-subtle: #8995ae;
 
   /* Water accent — reserved for primary actions, selection, and live state */
   --color-aqua-300: #8fe3ec;
@@ -76,7 +79,10 @@
 
   --color-ink: #121722;
   --color-ink-muted: #4b566b;
-  --color-ink-subtle: #76829a;
+  /* WCAG AA (4.5:1) against every surface this text sits on — #76829a only
+     cleared 3.6–3.9:1 and this color carries help/description copy
+     throughout the app. */
+  --color-ink-subtle: #5c6780;
 
   --color-aqua-300: #0e8fa6;
   --color-aqua-400: #0d7b90;

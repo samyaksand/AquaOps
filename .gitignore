@@ -46,5 +46,8 @@ build/
 *.tmp
 *.bak
 
+# Ad-hoc local verification screenshots/scripts — never meant to be shared
+.shots/
+
 # Claude project instructions (local only)
 CLAUDE.md

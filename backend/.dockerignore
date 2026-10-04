@@ -4,3 +4,9 @@ __pycache__
 .pytest_cache
 *.pyc
 .env
+
+# Test source isn't needed at runtime — keeps it out of the production image
+# even though pytest itself stays a declared dependency (used by local/CI
+# tooling via the single requirements.txt).
+tests/
+pytest.ini

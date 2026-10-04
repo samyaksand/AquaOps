@@ -5,7 +5,8 @@
  * should actually see, so no component hardcodes or re-derives that mapping.
  */
 
-import type { NetworkState } from '@/types/network'
+import { formatPercent } from '@/lib/format'
+import type { NetworkState, ScenarioChangeIn } from '@/types/network'
 
 /** Builds a code → display-name lookup from the current network. Entries for
  * sources, transits, demand points, and tankers — the only kinds a scenario
@@ -38,4 +39,31 @@ export function linkLabel(
   targetCode: string,
 ): string {
   return `${nameFor(index, sourceCode)} → ${nameFor(index, targetCode)}`
+}
+
+/** One plain-language sentence for a scenario change, by human name rather
+ * than code — shared between the scenario builder's own draft list and the
+ * Normal vs Scenario impact banner, so "what changed" reads identically in
+ * both places. */
+export function describeScenarioChange(
+  change: ScenarioChangeIn,
+  names: Record<string, string>,
+): string {
+  const target = nameFor(names, change.target_code)
+  switch (change.type) {
+    case 'reduce_reservoir_supply':
+      return `Reduce supply from ${target} by ${formatPercent(change.fraction)}`
+    case 'reduce_treatment_capacity':
+      return `Reduce capacity at ${target} by ${formatPercent(change.fraction)}`
+    case 'reduce_pipeline_capacity':
+      return `Reduce capacity on ${target} by ${formatPercent(change.fraction)}`
+    case 'set_pipeline_unavailable':
+      return `Take ${target} offline`
+    case 'change_zone_demand':
+      return `Scale demand at ${target} to ${formatPercent(change.factor)}`
+    case 'change_facility_demand':
+      return `Scale demand at ${target} to ${formatPercent(change.factor)}`
+    case 'set_tanker_unavailable':
+      return `Take ${target} out of service`
+  }
 }

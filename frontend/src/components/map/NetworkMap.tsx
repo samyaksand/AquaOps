@@ -18,6 +18,7 @@ interface NetworkMapProps {
   error: string | null
   onRetry: () => void
   allocation?: AllocationResult | null
+  highlightCodes?: Set<string>
 }
 
 export function NetworkMap({
@@ -26,6 +27,7 @@ export function NetworkMap({
   error,
   onRetry,
   allocation = null,
+  highlightCodes,
 }: NetworkMapProps) {
   const { geography, error: geographyError } = useGeography()
   const [hover, setHover] = useState<{
@@ -57,6 +59,7 @@ export function NetworkMap({
         onHoverChange={(entity, screen) =>
           setHover(entity && screen ? { entity, screen } : null)
         }
+        highlightCodes={highlightCodes}
       />
       <NodeDetails model={model} />
       <MapControls />

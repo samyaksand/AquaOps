@@ -1,4 +1,5 @@
 import { Building2, Factory, Hospital, Map, Truck, Waves } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { NetworkMap } from '@/components/map/NetworkMap'
 import { Badge } from '@/components/ui/Badge'
@@ -16,6 +17,12 @@ interface MapWorkspaceProps {
   onRetry: () => void
   allocation?: AllocationResult | null
   showingScenario?: boolean
+  /** Rendered absolutely over just the map canvas (not the header/legend) —
+   * e.g. the first-visit intro card. */
+  mapOverlay?: ReactNode
+  /** Node/pipeline codes to keep in focus regardless of hover/selection —
+   * e.g. the Scenario Lab's current change targets. */
+  highlightCodes?: Set<string>
 }
 
 /** Chrome around the interactive network map: title bar and type legend. */
@@ -26,6 +33,8 @@ export function MapWorkspace({
   onRetry,
   allocation = null,
   showingScenario = false,
+  mapOverlay,
+  highlightCodes,
 }: MapWorkspaceProps) {
   return (
     <div
@@ -62,7 +71,9 @@ export function MapWorkspace({
           error={error}
           onRetry={onRetry}
           allocation={allocation}
+          highlightCodes={highlightCodes}
         />
+        {mapOverlay}
       </div>
 
       <Legend network={network} />

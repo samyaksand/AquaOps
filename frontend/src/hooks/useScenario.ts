@@ -23,12 +23,16 @@ export function useScenario() {
   const reallocating = useScenarioStore((state) => state.reallocating)
   const reallocateError = useScenarioStore((state) => state.reallocateError)
 
+  const setName = useScenarioStore((state) => state.setName)
   const setApplying = useScenarioStore((state) => state.setApplying)
   const setApplyError = useScenarioStore((state) => state.setApplyError)
   const setReallocating = useScenarioStore((state) => state.setReallocating)
   const setReallocateError = useScenarioStore((state) => state.setReallocateError)
   const setApplied = useScenarioStore((state) => state.setApplied)
   const setAllocated = useScenarioStore((state) => state.setAllocated)
+  const commitRun = useScenarioStore((state) => state.commitRun)
+  const history = useScenarioStore((state) => state.history)
+  const clearHistory = useScenarioStore((state) => state.clearHistory)
   const reset = useScenarioStore((state) => state.reset)
 
   const buildScenario = useCallback(
@@ -70,15 +74,18 @@ export function useScenario() {
         const scenario = buildScenario(changesOverride)
         const result = await allocateScenario(scenario, strategy)
         setAllocated(result.network, result.scenario, result.allocation)
+        commitRun()
       } catch (caught) {
         setReallocateError(describeError(caught))
       }
     },
-    [buildScenario, setAllocated, setReallocating, setReallocateError],
+    [buildScenario, setAllocated, commitRun, setReallocating, setReallocateError],
   )
 
   return {
     drafts,
+    name,
+    setName,
     mode,
     summary,
     network,
@@ -87,6 +94,8 @@ export function useScenario() {
     applyError,
     reallocating,
     reallocateError,
+    history,
+    clearHistory,
     apply,
     reallocate,
     reset,

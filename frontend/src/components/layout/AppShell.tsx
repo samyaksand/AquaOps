@@ -5,41 +5,37 @@ import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Badge } from '@/components/ui/Badge'
 import { Button, IconButton } from '@/components/ui/Button'
-import { ComparisonBar } from '@/components/workspace/ComparisonBar'
 import { DecisionPanel } from '@/components/workspace/DecisionPanel'
 import { MapWorkspace } from '@/components/workspace/MapWorkspace'
 import { MetricsBar } from '@/components/workspace/MetricsBar'
 import { OverviewView } from '@/components/workspace/OverviewView'
-import { ScenarioPanel } from '@/components/workspace/ScenarioPanel'
+import { ScenarioLabView } from '@/components/scenario/ScenarioLabView'
 import { DecisionAnalysisView } from '@/components/decision/DecisionAnalysisView'
 import { DemoMode } from '@/components/demo/DemoMode'
 import { useAllocation } from '@/hooks/useAllocation'
 import { useNetwork } from '@/hooks/useNetwork'
 import { useRealtime } from '@/hooks/useRealtime'
 import { useAppStore } from '@/store/useAppStore'
-import { useScenarioStore } from '@/store/useScenarioStore'
 
 /**
  * The dashboard frame: fixed sidebar and header, a scrollable workspace that
  * splits into map plus a decision panel, and a metrics strip pinned below.
  *
- * The map is the primary workspace and always keeps its full box: the
- * controls panel (demand priorities / strategy, or in Scenarios the
- * scenario builder) is an absolutely-positioned overlay drawer on top of the
- * map, never a flex sibling, so opening it never shrinks or re-fits the
- * network. It opens via a small floating button and closes via its own
- * button or a click on the dimmed backdrop.
+ * The map is the primary workspace and always keeps its full box on Network/
+ * Strategies: the controls panel (demand priorities / strategy) is an
+ * absolutely-positioned overlay drawer on top of the map, never a flex
+ * sibling, so opening it never shrinks or re-fits the network. It opens via
+ * a small floating button and closes via its own button or a click on the
+ * dimmed backdrop.
  *
- * The Scenarios nav view swaps the decision panel for the scenario builder
- * and, once a scenario has been applied, shows the map and metrics for the
- * scenario's network instead of the normal one — the normal allocation
- * underneath is untouched and the comparison strip holds both.
- *
- * The Decision Analysis nav view replaces the map/panel split entirely with
- * a full-width page (the Pareto chart is meant to be the strongest surface
- * in the app). "Inspect on Map" from there sets `inspectedAllocation` and
- * switches to Network, which shows that exact allocation on the map with a
- * visible "Inspecting: <candidate>" badge until cleared.
+ * The Scenarios nav view and the Decision Analysis nav view both replace the
+ * map/panel split entirely with a full-width page — Scenario Lab makes
+ * scenario exploration (choose → configure → impact → compare → Pareto) the
+ * primary workspace rather than a small drawer, and Decision Analysis makes
+ * the Pareto chart the strongest surface in the app. "Inspect on Map" from
+ * there sets `inspectedAllocation` and switches to Network, which shows that
+ * exact allocation on the map with a visible "Inspecting: <candidate>" badge
+ * until cleared.
  */
 export function AppShell() {
   const { network, error, loading, refresh } = useNetwork()
@@ -59,22 +55,40 @@ export function AppShell() {
   const sidePanelCollapsed = useAppStore((state) => state.sidePanelCollapsed)
   const toggleSidePanel = useAppStore((state) => state.toggleSidePanel)
 
-  const scenarioMode = useScenarioStore((state) => state.mode)
-  const scenarioNetwork = useScenarioStore((state) => state.network)
-  const scenarioAllocation = useScenarioStore((state) => state.allocation)
-
   const inOverviewView = view === 'overview'
   const inScenarioView = view === 'scenarios'
   const inDecisionView = view === 'decision'
-  const showingScenario = inScenarioView && scenarioMode === 'scenario'
   const showingInspected = !inScenarioView && inspectedAllocation !== null
 
-  const displayedNetwork = showingScenario ? scenarioNetwork ?? network : network
-  const displayedAllocation = showingScenario
-    ? scenarioAllocation ?? normalAllocation
-    : showingInspected
-      ? inspectedAllocation
-      : normalAllocation
+  const displayedNetwork = network
+  const displayedAllocation = showingInspected ? inspectedAllocation : normalAllocation
+
+  if (inScenarioView) {
+    return (
+      <div className="flex h-screen overflow-hidden bg-abyss">
+        <Sidebar />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Header
+            connected={network !== null && error === null}
+            loading={loading}
+            onRefresh={() => void refresh()}
+            realtimeStatus={realtimeStatus}
+          />
+          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
+            <ScenarioLabView
+              network={network}
+              normalAllocation={normalAllocation}
+              loading={loading}
+              error={error}
+              onRetry={() => void refresh()}
+              onOpenDecisionAnalysis={() => setView('decision')}
+            />
+          </main>
+        </div>
+        <DemoMode network={network} />
+      </div>
+    )
+  }
 
   if (inDecisionView) {
     return (
@@ -149,7 +163,6 @@ export function AppShell() {
                 error={error}
                 onRetry={() => void refresh()}
                 allocation={displayedAllocation}
-                showingScenario={showingScenario}
               />
             </div>
 
@@ -176,9 +189,7 @@ export function AppShell() {
               aria-label="Open controls panel"
             >
               <PanelRightOpen className="size-4" />
-              <span className="text-xs font-medium">
-                {inScenarioView ? 'Scenario' : 'Controls'}
-              </span>
+              <span className="text-xs font-medium">Controls</span>
             </button>
 
             <aside
@@ -197,20 +208,10 @@ export function AppShell() {
                 >
                   Hide panel
                 </Button>
-                {inScenarioView ? (
-                  <ScenarioPanel network={network} />
-                ) : (
-                  <DecisionPanel network={network} />
-                )}
+                <DecisionPanel network={network} />
               </div>
             </aside>
           </div>
-          {showingScenario ? (
-            <ComparisonBar
-              normal={normalAllocation}
-              scenario={scenarioAllocation}
-            />
-          ) : null}
           <MetricsBar network={displayedNetwork} />
         </main>
       </div>

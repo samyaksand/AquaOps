@@ -2,6 +2,7 @@ import { MapWorkspace } from '@/components/workspace/MapWorkspace'
 import { MetricsBar } from '@/components/workspace/MetricsBar'
 import { OverviewActions } from '@/components/workspace/OverviewActions'
 import { AttentionStrip } from '@/components/workspace/AttentionStrip'
+import { IntroOverlay } from '@/components/workspace/IntroOverlay'
 import { useAllocation } from '@/hooks/useAllocation'
 import { useAppStore, type ViewId } from '@/store/useAppStore'
 import type { NetworkState } from '@/types/network'
@@ -46,6 +47,7 @@ export function OverviewView({
           error={error}
           onRetry={onRetry}
           allocation={allocation}
+          mapOverlay={<IntroOverlay />}
         />
       </div>
 

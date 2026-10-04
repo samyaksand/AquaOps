@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 
 import { analyzeDecisions, describeError, scoreAllocation } from '@/lib/api'
 import { useAppStore } from '@/store/useAppStore'
@@ -48,7 +48,16 @@ export function useDecisionAnalysis() {
   const scenarioName = useScenarioStore((state) => state.name)
   const scenarioDescription = useScenarioStore((state) => state.description)
 
+  // Guards against a stale response overwriting a newer one: if `analyze()`
+  // is called again (e.g. a fast double-click on "Run Analysis", or the
+  // scenario changing mid-request) before the first call's requests
+  // resolve, only the most recently issued call is allowed to commit its
+  // result to the store. Mirrors the `cancelled`-flag pattern already used
+  // in ScenarioComparison's RunDiff for the same class of race.
+  const requestId = useRef(0)
+
   const analyze = useCallback(async () => {
+    const thisRequestId = ++requestId.current
     setLoading(true)
     const useScenario = scenarioMode === 'scenario' && scenarioDrafts.length > 0
     const scenario: ScenarioIn | undefined = useScenario
@@ -64,6 +73,7 @@ export function useDecisionAnalysis() {
         scoreAllocation(currentStrategy, scenario),
         useScenario ? analyzeDecisions() : Promise.resolve(null),
       ])
+      if (thisRequestId !== requestId.current) return // superseded by a newer call
       setAnalysis(result, useScenario)
       setBaselineObjectives(baseline)
       setNormalAnalysis(normal)
@@ -72,6 +82,7 @@ export function useDecisionAnalysis() {
       // as a starting recommendation.
       selectCandidate(null)
     } catch (caught) {
+      if (thisRequestId !== requestId.current) return // superseded by a newer call
       setError(describeError(caught))
     }
   }, [

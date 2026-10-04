@@ -30,6 +30,11 @@ const LABEL_ZOOM_THRESHOLD = 1.4
 interface MapCanvasProps {
   model: MapModel
   onHoverChange: (entity: MapEntity | null, screen: Point | null) => void
+  /** Codes to keep in focus regardless of hover/selection — e.g. a scenario
+   * builder's current change targets. Additive to the existing hover/select
+   * focus mechanism, not a replacement: when both are present the union of
+   * connected codes stays visible. */
+  highlightCodes?: Set<string>
 }
 
 /** Converts a client point into the SVG's viewBox coordinate system. */
@@ -43,7 +48,11 @@ function toViewBox(svg: SVGSVGElement, clientX: number, clientY: number): Point 
   return { x: mapped.x, y: mapped.y }
 }
 
-export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
+export function MapCanvas({
+  model,
+  onHoverChange,
+  highlightCodes,
+}: MapCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const offsets = useMapStore((state) => state.offsets)
   const zoom = useMapStore((state) => state.zoom)
@@ -97,9 +106,16 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
 
   // The set of node codes directly connected to the hovered/selected node,
   // so the rest of the network can recede rather than compete for attention.
+  // An external `highlightCodes` set (e.g. the Scenario Lab's current change
+  // targets) is folded in additively: a hover/select focus still narrows to
+  // its own connections, but with nothing hovered/selected the scenario's
+  // own targets stay in focus instead of the whole network reading flat.
   const focusCode = selected ?? hovered
+  const hasExternalHighlight = !!highlightCodes && highlightCodes.size > 0
   const connectedCodes = useMemo(() => {
-    if (!focusCode) return null
+    if (!focusCode) {
+      return hasExternalHighlight ? highlightCodes! : null
+    }
     const set = new Set<string>([focusCode])
     for (const edge of model.edges) {
       if (edge.sourceCode === focusCode) set.add(edge.targetCode)
@@ -110,7 +126,7 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
       if (tether.hubCode === focusCode) set.add(tether.tankerCode)
     }
     return set
-  }, [focusCode, model.edges, model.tankerTethers])
+  }, [focusCode, hasExternalHighlight, highlightCodes, model.edges, model.tankerTethers])
 
   const handleNodePointerDown = (
     event: React.PointerEvent<SVGGElement>,
@@ -269,9 +285,12 @@ export function MapCanvas({ model, onHoverChange }: MapCanvasProps) {
               const b = positionOf(target)
               const touchesFocus =
                 connectedCodes !== null &&
-                (connectedCodes.has(edge.sourceCode) ||
-                  connectedCodes.has(edge.targetCode)) &&
-                (edge.sourceCode === focusCode || edge.targetCode === focusCode)
+                (focusCode
+                  ? (connectedCodes.has(edge.sourceCode) ||
+                      connectedCodes.has(edge.targetCode)) &&
+                    (edge.sourceCode === focusCode || edge.targetCode === focusCode)
+                  : connectedCodes.has(edge.sourceCode) ||
+                    connectedCodes.has(edge.targetCode))
               const dimmedByFocus = connectedCodes !== null && !touchesFocus
 
               const hasFlow = model.hasAllocation && edge.flowM3PerDay > 0

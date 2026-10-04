@@ -12,6 +12,7 @@ import {
 import type { ComponentType } from 'react'
 
 import { IconButton } from '@/components/ui/Button'
+import { AboutAquaOps } from '@/components/workspace/AboutAquaOps'
 import { DemoLaunchButton } from '@/components/demo/DemoMode'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { useAppStore, type ViewId } from '@/store/useAppStore'
@@ -129,6 +130,7 @@ export function Sidebar() {
         ) : (
           <>
             <DemoLaunchButton />
+            <AboutAquaOps />
             <p className="px-2 py-1 text-[10px] leading-relaxed text-ink-subtle">
               Simulated decision support. Not connected to live infrastructure.
             </p>
