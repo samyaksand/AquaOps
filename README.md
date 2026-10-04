@@ -180,7 +180,7 @@ Operational network information becomes a set of analytical alternatives, evalua
 ## Currently in progress
 
 - **Tracing backend:** OpenTelemetry spans are generated and export over OTLP when configured, but no collector (Jaeger/Tempo) is deployed yet. Traces currently land on console output.
-- **Tanker dispatch state:** `idle` / `en_route` / `maintenance` and route data already exist on the tanker model but aren't yet exposed through the API or map. Tankers currently show only a collapsed online/offline state.
+- **Tanker dispatch state:** `idle` / `en_route` / `maintenance` and route data already exist on the tanker model but aren't yet exposed through the API or map.
 - **Benchmarking / load testing:** not yet built.
 
 ---
@@ -238,7 +238,17 @@ pip install -r backend/requirements.txt
 
 # Frontend
 cd frontend && npm install && cd ..
+```
 
+With dependencies installed once, start everything (Docker infrastructure, migrations, seed, backend, frontend) in one command from the repo root:
+
+```powershell
+.\start-dev.ps1
+```
+
+Or run each step manually:
+
+```bash
 # Local infrastructure: Postgres/PostGIS, Redis, Kafka
 docker compose -f infrastructure/docker/docker-compose.yml up -d
 
@@ -258,6 +268,8 @@ cd ../frontend && npm run dev        # frontend
 Open the frontend and start in Scenario Lab to model a disruption, reallocate resources, and inspect the resulting trade-offs.
 
 No `.env` file is required for local development. The event worker (`python -m app.worker`, from `backend/`) is optional and only needed to see WebSocket broadcasts relayed via Kafka from a second process.
+
+The local Postgres container listens on host port **5433**, not 5432, to avoid colliding with a native PostgreSQL install that may already be bound to 5432 on the same machine. `DATABASE_URL`'s local default already matches this.
 
 ## Configuration
 

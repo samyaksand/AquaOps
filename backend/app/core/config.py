@@ -34,9 +34,11 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
 
-    # Database (not connected yet; placeholder for future stages)
+    # Database. Port 5433, not 5432 — the local Docker Compose Postgres maps
+    # to 5433 on the host to avoid clashing with a native PostgreSQL install
+    # that may also be bound to 5432 (see infrastructure/docker/docker-compose.yml).
     database_url: str = (
-        "postgresql+asyncpg://aquaops:aquaops@localhost:5432/aquaops"
+        "postgresql+asyncpg://aquaops:aquaops@localhost:5433/aquaops"
     )
     database_echo: bool = False
 

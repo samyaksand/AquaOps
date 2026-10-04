@@ -7,7 +7,11 @@ services:
       POSTGRES_PASSWORD: aquaops
       POSTGRES_DB: aquaops
     ports:
-      - "5432:5432"
+      # Host port 5433, not 5432 — avoids colliding with a native PostgreSQL
+      # install also bound to 5432 on the host (a real, previously
+      # undiagnosed cause of "password authentication failed": the backend
+      # was silently reaching the native instance instead of this container).
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

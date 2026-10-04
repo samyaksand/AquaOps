@@ -18,7 +18,7 @@ def test_local_environment_retains_current_defaults(monkeypatch):
     assert settings.environment == "local"
     assert settings.debug is True
     assert settings.database_url == (
-        "postgresql+asyncpg://aquaops:aquaops@localhost:5432/aquaops"
+        "postgresql+asyncpg://aquaops:aquaops@localhost:5433/aquaops"
     )
     assert settings.cors_origins == [
         "http://localhost:5173",
