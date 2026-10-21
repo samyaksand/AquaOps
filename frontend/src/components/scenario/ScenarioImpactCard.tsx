@@ -34,7 +34,7 @@ export function ScenarioImpactCard({
       <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-hairline px-4 py-8 text-center">
         <GitCompareArrows className="size-5 text-ink-subtle" aria-hidden="true" />
         <p className="text-[13px] text-ink-subtle">
-          Apply and reallocate a scenario to see its impact here.
+          Reallocate a scenario to see its impact here.
         </p>
       </div>
     )
@@ -136,7 +136,7 @@ function buildHeadline(
   if (relativeChange < SIGNIFICANCE_THRESHOLD && shortfallDelta === 0) {
     return {
       headline:
-        'No meaningful allocation change — the disrupted asset was not the network’s binding constraint here.',
+        'No meaningful allocation change - the disrupted asset was not the network’s binding constraint here.',
       noChange: true,
     }
   }

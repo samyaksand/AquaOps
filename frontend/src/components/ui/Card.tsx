@@ -4,11 +4,13 @@ import type { ReactNode } from 'react'
 interface PanelProps {
   children: ReactNode
   className?: string
+  id?: string
 }
 
-export function Panel({ children, className }: PanelProps) {
+export function Panel({ children, className, id }: PanelProps) {
   return (
     <section
+      id={id}
       className={clsx(
         'rounded-panel border border-hairline bg-surface',
         className,
@@ -24,6 +26,10 @@ interface PanelHeaderProps {
   subtitle?: string
   icon?: ReactNode
   actions?: ReactNode
+  /** Rendered right after the title — e.g. an InfoTooltip explaining a
+   * technical term in the title, without widening `title` itself to a
+   * ReactNode (which would ripple through every other call site). */
+  titleInfo?: ReactNode
 }
 
 export function PanelHeader({
@@ -31,6 +37,7 @@ export function PanelHeader({
   subtitle,
   icon,
   actions,
+  titleInfo,
 }: PanelHeaderProps) {
   return (
     <header className="flex items-start justify-between gap-3 border-b border-hairline px-4 py-3">
@@ -41,7 +48,10 @@ export function PanelHeader({
           </span>
         ) : null}
         <div className="min-w-0">
-          <h2 className="truncate text-sm font-semibold text-ink">{title}</h2>
+          <h2 className="flex items-center gap-1.5 truncate text-sm font-semibold text-ink">
+            {title}
+            {titleInfo}
+          </h2>
           {subtitle ? (
             <p className="mt-0.5 truncate text-xs text-ink-subtle">
               {subtitle}

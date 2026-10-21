@@ -25,7 +25,7 @@ export function NodeDetails({ model }: { model: MapModel }) {
 
   return (
     <div
-      className="rise-in absolute top-4 left-4 w-80 overflow-hidden rounded-xl border border-divider bg-depth/95 backdrop-blur"
+      className="rise-in absolute top-4 left-4 z-30 w-80 overflow-hidden rounded-xl border border-divider bg-depth/95 backdrop-blur"
       style={{ boxShadow: 'var(--shadow-lift)' }}
     >
       <header className="flex items-start gap-3 border-b border-hairline px-4 py-3.5">

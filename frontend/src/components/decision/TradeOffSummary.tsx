@@ -41,7 +41,7 @@ export function TradeOffSummary({ selected, baseline }: TradeOffSummaryProps) {
           : improved.length > 0 && worsened.length === 0
             ? `Improves ${joinLabels(improved.map((d) => d.label))} with no trade-off on the rest.`
             : worsened.length > 0 && improved.length === 0
-              ? `Costs ${joinLabels(worsened.map((d) => d.label))} with no gain elsewhere — unlikely to be worth selecting.`
+              ? `Costs ${joinLabels(worsened.map((d) => d.label))} with no gain elsewhere - unlikely to be worth selecting.`
               : `Improves ${joinLabels(improved.map((d) => d.label))} at the cost of ${joinLabels(worsened.map((d) => d.label))}.`}
       </p>
 

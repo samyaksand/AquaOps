@@ -21,7 +21,7 @@ const POINTS = [
   {
     icon: GitCompareArrows,
     title: 'Four allocation strategies',
-    text: 'Population First, Critical Infrastructure First, Efficiency First, and Balanced — each produces a genuinely different outcome.',
+    text: 'Population First, Critical Infrastructure First, Efficiency First, and Balanced - each produces a genuinely different outcome.',
   },
   {
     icon: ScatterChart,
@@ -31,7 +31,7 @@ const POINTS = [
   {
     icon: HeartHandshake,
     title: 'Supports, never replaces, judgment',
-    text: 'AquaOps computes real trade-offs for a human decision-maker — it never decides societal priorities on its own.',
+    text: 'AquaOps computes real trade-offs for a human decision-maker - it never decides societal priorities on its own.',
   },
 ]
 
@@ -109,7 +109,7 @@ export function AboutAquaOps() {
               </ul>
 
               <p className="mt-4 text-[10px] leading-relaxed text-ink-subtle">
-                Simulated prototype — not connected to real infrastructure or
+                Simulated prototype - not connected to real infrastructure or
                 validated for operational use.
               </p>
             </motion.div>

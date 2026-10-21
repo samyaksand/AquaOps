@@ -160,71 +160,85 @@ export function AppShell() {
           onRefresh={() => void refresh()}
           realtimeStatus={realtimeStatus}
         />
-        <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+        {/* No `overflow-y-auto` here: a scrollable flex container lets its
+            flex-growing children fall back to their content/min size
+            instead of actually filling it — exactly what was starving the
+            map box of height whenever MetricsBar's natural content made the
+            total taller than the viewport. MetricsBar now caps and scrolls
+            itself (see its own component); the map keeps the real
+            remaining space, which is the one CLAUDE.md says must always
+            get its full layout box. */}
+        {/* `relative` lives here, not on the inner map-box wrapper: the
+            Controls panel is `absolute … h-full` against whichever ancestor
+            is `relative`, so anchoring it to this full-height `<main>`
+            instead of the (often much shorter, once MetricsBar's own
+            natural height is accounted for) map box gives the panel real
+            room to render its own content without being clipped to
+            whatever's left over for the map specifically. */}
+        <main className="relative flex min-h-0 flex-1 flex-col gap-3 p-3">
           {showingInspected ? (
             <InspectedBanner
               candidateId={inspectedCandidateId}
               onClear={clearInspectedAllocation}
             />
           ) : null}
-          <div className="relative flex min-h-0 flex-1 flex-col gap-3">
-            <div className="flex min-h-100 flex-1 flex-col">
-              <MapWorkspace
-                network={displayedNetwork}
-                loading={loading}
-                error={error}
-                onRetry={() => void refresh()}
-                allocation={displayedAllocation}
-              />
-            </div>
+          <div className="flex min-h-100 flex-1 flex-col">
+            <MapWorkspace
+              network={displayedNetwork}
+              loading={loading}
+              error={error}
+              onRetry={() => void refresh()}
+              allocation={displayedAllocation}
+            />
+          </div>
 
-            {/* The controls panel is an overlay, never a layout sibling —
-                opening it must not shrink the map's own box (see CLAUDE.md,
-                Network Map: controls overlay the map). */}
-            {!sidePanelCollapsed ? (
-              <button
-                type="button"
-                aria-label="Close controls panel"
-                onClick={toggleSidePanel}
-                className="absolute inset-0 z-10 bg-abyss/40 backdrop-blur-[1px]"
-              />
-            ) : null}
-
+          {/* The controls panel is an overlay, never a layout sibling —
+              opening it must not shrink the map's own box (see CLAUDE.md,
+              Network Map: controls overlay the map). */}
+          {!sidePanelCollapsed ? (
             <button
               type="button"
+              aria-label="Close controls panel"
               onClick={toggleSidePanel}
-              className={
-                sidePanelCollapsed
-                  ? 'absolute top-16 right-3 z-20 flex items-center gap-2 rounded-xl border border-hairline bg-depth/95 px-3 py-2 text-ink-muted shadow-lg backdrop-blur transition-colors hover:text-ink'
-                  : 'hidden'
-              }
-              aria-label="Open controls panel"
-            >
-              <PanelRightOpen className="size-4" />
-              <span className="text-xs font-medium">Controls</span>
-            </button>
+              className="absolute inset-0 z-10 bg-abyss/30"
+            />
+          ) : null}
 
-            <aside
-              className={clsx(
-                'absolute top-0 right-0 z-20 flex h-full w-full max-w-sm flex-col gap-2 p-3 transition-transform duration-200 ease-out',
-                sidePanelCollapsed ? 'translate-x-full' : 'translate-x-0',
-              )}
-            >
-              <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-hairline bg-depth/98 p-3 shadow-2xl backdrop-blur">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={toggleSidePanel}
-                  icon={<PanelRightClose className="size-3.5" />}
-                  className="self-end"
-                >
-                  Hide panel
-                </Button>
-                <DecisionPanel network={network} />
-              </div>
-            </aside>
-          </div>
-          <MetricsBar network={displayedNetwork} />
+          <button
+            id="demo-open-controls"
+            type="button"
+            onClick={toggleSidePanel}
+            className={
+              sidePanelCollapsed
+                ? 'absolute top-16 right-6 z-20 flex items-center gap-2 rounded-xl border border-hairline bg-depth/95 px-3 py-2 text-ink-muted shadow-lg backdrop-blur transition-colors hover:text-ink'
+                : 'hidden'
+            }
+            aria-label="Open controls panel"
+          >
+            <PanelRightOpen className="size-4" />
+            <span className="text-xs font-medium">Controls</span>
+          </button>
+
+          <aside
+            className={clsx(
+              'absolute top-3 right-3 bottom-3 z-20 flex w-full max-w-sm flex-col gap-2 transition-transform duration-200 ease-out',
+              sidePanelCollapsed ? 'translate-x-[calc(100%+0.75rem)]' : 'translate-x-0',
+            )}
+          >
+            <div className="flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border border-hairline bg-depth/98 p-4 shadow-2xl backdrop-blur">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={toggleSidePanel}
+                icon={<PanelRightClose className="size-3.5" />}
+                className="self-end"
+              >
+                Hide panel
+              </Button>
+              <DecisionPanel network={network} />
+            </div>
+          </aside>
+          <MetricsBar network={displayedNetwork} allocation={displayedAllocation} />
         </main>
       </div>
       <DemoMode network={network} />
@@ -248,7 +262,7 @@ function InspectedBanner({
           {candidateId
             ? candidateId.replace('candidate-', 'Decision Analysis option ')
             : 'a selected decision'}{' '}
-          — not the live allocation
+          - not the live allocation
         </span>
       </div>
       <IconButton label="Stop inspecting" onClick={onClear} className="size-6">

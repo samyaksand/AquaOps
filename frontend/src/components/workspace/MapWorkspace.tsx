@@ -38,6 +38,7 @@ export function MapWorkspace({
 }: MapWorkspaceProps) {
   return (
     <div
+      id="demo-network-map"
       className={
         showingScenario
           ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-status-warn/35 bg-surface'
@@ -89,6 +90,25 @@ const ENTRIES = [
   { kind: 'tanker', icon: Truck, label: 'Tanker' },
 ] as const
 
+// Mirrors components/map/glyphs.ts's STATE_RING/EDGE_COLORS exactly — this
+// is the one place that explains what those colors mean, since the map
+// canvas itself only ever shows the color, never a label. "Unavailable"
+// (an asset's own operational state) and "unmet demand" (an allocation
+// outcome on a demand point) are two different concepts but deliberately
+// share one color on the map — color there means "look here", not a single
+// cause — so the legend says so explicitly rather than implying they're
+// the same thing or splitting them into a color distinction the map
+// doesn't actually draw. Hovering any node's own tooltip always shows
+// which of the two applies to it specifically.
+const STATE_ENTRIES = [
+  { tone: 'status-ok', label: 'Online' },
+  { tone: 'status-warn', label: 'Derated' },
+  {
+    tone: 'status-critical',
+    label: 'Unavailable OR unmet demand (hover a node to see which)',
+  },
+] as const
+
 function Legend({ network }: { network: NetworkState | null }) {
   const counts: Record<string, number> = network
     ? {
@@ -112,6 +132,17 @@ function Legend({ network }: { network: NetworkState | null }) {
               {counts[kind]}
             </span>
           ) : null}
+        </div>
+      ))}
+      <span className="h-3.5 w-px bg-hairline" aria-hidden="true" />
+      {STATE_ENTRIES.map(({ tone, label }) => (
+        <div key={tone} className="flex items-center gap-1.5">
+          <span
+            className="size-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: `var(--color-${tone})` }}
+            aria-hidden="true"
+          />
+          <span className="text-xs text-ink-muted">{label}</span>
         </div>
       ))}
     </div>

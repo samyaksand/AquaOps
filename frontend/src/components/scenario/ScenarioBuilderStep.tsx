@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlertTriangle, PlayCircle, Trash2, Waves } from 'lucide-react'
+import { AlertTriangle, Map, PlayCircle, Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { Button, IconButton } from '@/components/ui/Button'
@@ -26,20 +26,29 @@ interface ScenarioBuilderStepProps {
   onStrategyChange: (strategy: StrategyName) => void
   onChangeDraft: (id: number, change: ScenarioChangeIn) => void
   onRemoveDraft: (id: number) => void
-  applying: boolean
-  applyError: string | null
   reallocating: boolean
   reallocateError: string | null
-  onApply: () => void
   onReallocate: () => void
+  /** True once a Reallocate has run and the drafts have changed since —
+   * the displayed Scenario impact/Compare panels still reflect the OLD
+   * configuration until Reallocate runs again. */
+  configChangedSinceRun?: boolean
+  /** Opens the full-viewport map (reused from ScenarioMapOverlay, not a
+   * second implementation) — only meaningful once a reallocation has
+   * actually produced a result to show, so this stays hidden until then. */
+  onOpenMap: () => void
+  hasReallocated: boolean
 }
 
 /**
  * "Configure, then run" — the middle of the Choose → Simulate → See impact
- * flow. Each added change gets one row to tune (target + magnitude); Apply
- * previews the disrupted network, Reallocate runs the engine over it. Pure
- * presentation over `useScenario()` / `useScenarioStore()` — the caller
- * (ScenarioLabView) owns all the actual state.
+ * flow. Each added change gets one row to tune (target + magnitude);
+ * Reallocate applies the change and runs the allocation engine over it in
+ * one call — there's no separate preview-only step, since Reallocate is the
+ * same request plus the real result, with no extra cost to the user for
+ * skipping straight to it. Pure presentation over `useScenario()` /
+ * `useScenarioStore()` — the caller (ScenarioLabView) owns all the actual
+ * state.
  */
 export function ScenarioBuilderStep({
   network,
@@ -51,12 +60,12 @@ export function ScenarioBuilderStep({
   onStrategyChange,
   onChangeDraft,
   onRemoveDraft,
-  applying,
-  applyError,
   reallocating,
   reallocateError,
-  onApply,
   onReallocate,
+  configChangedSinceRun = false,
+  onOpenMap,
+  hasReallocated,
 }: ScenarioBuilderStepProps) {
   return (
     <div className="space-y-3">
@@ -118,18 +127,19 @@ export function ScenarioBuilderStep({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      {configChangedSinceRun ? (
+        <p className="flex items-center gap-1.5 rounded-lg border border-status-warn/30 bg-status-warn/10 px-2.5 py-1.5 text-[11px] text-status-warn">
+          <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+          Configuration changed since the last Reallocate - results below are
+          from the previous configuration.
+        </p>
+      ) : null}
+
+      <div className={hasReallocated ? 'grid grid-cols-[1fr_auto] gap-2' : undefined}>
         <Button
-          variant="secondary"
-          disabled={drafts.length === 0 || applying}
-          onClick={onApply}
-          icon={applying ? <Spinner /> : <Waves className="size-4" />}
-          title="Preview the disrupted network without allocating"
-        >
-          {applying ? 'Applying…' : 'Apply'}
-        </Button>
-        <Button
+          id="demo-reallocate"
           variant="primary"
+          className="w-full"
           disabled={drafts.length === 0 || reallocating}
           onClick={onReallocate}
           icon={
@@ -139,13 +149,23 @@ export function ScenarioBuilderStep({
               <PlayCircle className="size-4" />
             )
           }
-          title="Apply and run the allocation engine over the result"
+          title="Apply this change and run the allocation engine over the result"
         >
           {reallocating ? 'Reallocating…' : 'Reallocate'}
         </Button>
+        {hasReallocated ? (
+          <Button
+            id="demo-view-updated-map"
+            variant="primary"
+            onClick={onOpenMap}
+            icon={<Map className="size-4" />}
+            title="See the network map updated with this reallocation's result"
+          >
+            View Network Map
+          </Button>
+        ) : null}
       </div>
 
-      {applyError ? <ErrorBanner message={applyError} /> : null}
       {reallocateError ? <ErrorBanner message={reallocateError} /> : null}
     </div>
   )

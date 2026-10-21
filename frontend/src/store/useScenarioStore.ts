@@ -52,6 +52,14 @@ interface ScenarioState {
   network: NetworkState | null
   allocation: AllocationResult | null
 
+  /** A snapshot of `drafts` taken at the moment of the last successful
+   * Reallocate — compared against the live `drafts` elsewhere in the UI to
+   * tell a viewer when their edits haven't been re-run yet, since
+   * `allocation` otherwise silently stays whatever the last Reallocate
+   * produced even after the configuration has moved on. Not sent anywhere;
+   * purely a UI staleness signal. */
+  allocatedDrafts: DraftChange[] | null
+
   /** Past completed runs this session, newest first — see `ScenarioRun`. */
   history: ScenarioRun[]
 
@@ -99,6 +107,7 @@ export const useScenarioStore = create<ScenarioState>((set) => ({
   summary: null,
   network: null,
   allocation: null,
+  allocatedDrafts: null,
 
   history: [],
 
@@ -136,14 +145,15 @@ export const useScenarioStore = create<ScenarioState>((set) => ({
       applyError: null,
     }),
   setAllocated: (network, summary, allocation) =>
-    set({
+    set((state) => ({
       network,
       summary,
       allocation,
+      allocatedDrafts: state.drafts,
       mode: 'scenario',
       reallocating: false,
       reallocateError: null,
-    }),
+    })),
 
   commitRun: () =>
     set((state) => {
@@ -167,6 +177,7 @@ export const useScenarioStore = create<ScenarioState>((set) => ({
       summary: null,
       network: null,
       allocation: null,
+      allocatedDrafts: null,
       applyError: null,
       reallocateError: null,
       drafts: [],

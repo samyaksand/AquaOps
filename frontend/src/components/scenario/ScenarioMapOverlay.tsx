@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Maximize2, X } from 'lucide-react'
+import { X } from 'lucide-react'
 
 import { MapWorkspace } from '@/components/workspace/MapWorkspace'
 import { Badge } from '@/components/ui/Badge'
@@ -19,30 +19,6 @@ interface ScenarioMapOverlayProps {
   highlightCodes: Set<string>
   scenarioName: string
   changeSummary: string | null
-}
-
-/** A small trigger button for opening the full-viewport map — placed where
- * the always-visible map panel used to sit, so the Scenario Lab's own
- * workflow gets that space instead. */
-export function ScenarioMapTrigger({ onOpen }: { onOpen: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center justify-between gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3.5 text-left transition-colors hover:border-ink-subtle/30 hover:bg-raised/40"
-    >
-      <div className="flex items-center gap-2.5">
-        <Maximize2 className="size-4 text-ink-muted" aria-hidden="true" />
-        <div>
-          <p className="text-[13px] font-semibold text-ink">View Network Map</p>
-          <p className="text-[11px] text-ink-subtle">
-            See affected assets highlighted on the full network
-          </p>
-        </div>
-      </div>
-      <span className="shrink-0 text-xs font-medium text-ink-subtle">Open →</span>
-    </button>
-  )
 }
 
 /**

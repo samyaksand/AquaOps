@@ -278,6 +278,23 @@ export const OBJECTIVE_KEYS = Object.keys(
   OBJECTIVE_LABELS,
 ) as (keyof ObjectiveScores)[]
 
+/** Short, implementation-accurate explanations for each objective — higher
+ * is always better for every one of these, including "Demand met" (already
+ * inverted server-side from unmet demand). Shown via InfoTooltip, not
+ * permanent prose, so the main layout stays uncluttered. */
+export const OBJECTIVE_EXPLANATIONS: Record<keyof ObjectiveScores, string> = {
+  critical_coverage:
+    'Share of critical facilities (hospitals, schools) that are fully supplied. Higher is better.',
+  population_served:
+    'Share of total population whose demand point is fully supplied. Higher is better.',
+  unmet_demand_score:
+    'How much of total demand was delivered, network-wide (1 = nothing unmet). Higher is better.',
+  logistics_efficiency:
+    'How efficiently supply reaches demand given pipeline losses and routing. Higher is better.',
+  equity:
+    'How evenly shortfalls are spread across demand points, rather than concentrated on a few. Higher is better.',
+}
+
 /** Mirrors `CandidateOut`: one generated allocation plus its scores. */
 export interface Candidate {
   candidate_id: string

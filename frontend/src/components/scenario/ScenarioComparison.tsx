@@ -90,7 +90,7 @@ function RunPicker({
         value={value ?? ''}
         options={history.map((run) => ({
           value: run.id,
-          label: `${run.name} — ${new Date(run.createdAt).toLocaleTimeString()}`,
+          label: `${run.name} - ${new Date(run.createdAt).toLocaleTimeString()}`,
         }))}
         onChange={(event) => onChange(event.target.value)}
       />
@@ -214,7 +214,7 @@ function RunDiff({ a, b }: { a: ScenarioRun; b: ScenarioRun }) {
                 <td className="tabular px-3 py-2 text-right text-ink">{row.b}</td>
                 <td className={`tabular px-3 py-2 text-right ${tone}`}>
                   {row.delta === null ? (
-                    '—'
+                    '-'
                   ) : row.delta === 0 ? (
                     'No change'
                   ) : (
@@ -247,7 +247,7 @@ function RunDiff({ a, b }: { a: ScenarioRun; b: ScenarioRun }) {
       </table>
       <div className="flex items-center gap-2 border-t border-hairline bg-raised/20 px-3 py-2 text-[11px] text-ink-subtle">
         <Scale className="size-3.5 shrink-0" aria-hidden="true" />
-        Neither run is labeled "better" — compare the trade-off and decide
+        Neither run is labeled "better" - compare the trade-off and decide
         what matters for this situation.
       </div>
     </motion.div>

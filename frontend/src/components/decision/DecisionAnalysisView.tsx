@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Panel, PanelBody, PanelHeader } from '@/components/ui/Card'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { EmptyState, ErrorState, Spinner } from '@/components/ui/States'
 import { useDecisionAnalysis } from '@/hooks/useDecisionAnalysis'
 import { useAppStore } from '@/store/useAppStore'
@@ -159,11 +160,21 @@ export function DecisionAnalysisView({
           ) : null}
 
           <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
-            <Panel className="flex min-h-0 flex-col">
+            <Panel className="flex min-h-0 flex-col overflow-y-auto">
               <PanelHeader
                 title="Trade-off chart (Pareto frontier)"
-                subtitle="Every point is a real allocation. The highlighted ones can't be improved on one measure without giving up another — hover for numbers, click to select"
+                subtitle="Every point is a real allocation. The highlighted ones can't be improved on one measure without giving up another - hover for numbers, click to select"
                 icon={<ScatterChart className="size-4" />}
+                titleInfo={
+                  <InfoTooltip>
+                    A Pareto frontier is the set of candidates where no other
+                    candidate scores at least as well on every objective and
+                    strictly better on at least one - each one represents a
+                    genuine trade-off, not a flaw. Candidates outside the
+                    frontier are "dominated": another candidate beats them on
+                    every measure.
+                  </InfoTooltip>
+                }
               />
               {distinctOutcomeCount > 0 && distinctOutcomeCount < analysis.candidates.length ? (
                 <div className="mx-4 mt-3 flex items-start gap-2 rounded-xl border border-hairline bg-raised/40 px-3 py-2.5">
@@ -174,7 +185,7 @@ export function DecisionAnalysisView({
                       {distinctOutcomeCount} distinct outcome{distinctOutcomeCount === 1 ? '' : 's'}
                     </span>
                     . One part of the network is the binding constraint, so many
-                    strategies converge on the same allocation — the trade-off
+                    strategies converge on the same allocation - the trade-off
                     is real, just narrower here than the grid size suggests.
                   </p>
                 </div>
@@ -265,7 +276,7 @@ function Toolbar({
           )}
         </div>
         <p className="mt-0.5 text-xs text-ink-subtle">
-          Generate candidate allocations and explore their trade-offs — no
+          Generate candidate allocations and explore their trade-offs - no
           candidate is ever marked "best".
         </p>
       </div>

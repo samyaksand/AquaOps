@@ -180,9 +180,29 @@
   animation: rise-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Guided Demo Mode: briefly outlines the section a step wants the viewer to
+   look at next, after scrolling it into view — a visual "look here" cue for
+   an action that otherwise only changes a status badge off-screen. */
+@keyframes demo-spotlight {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  15%,
+  55% {
+    box-shadow: 0 0 0 3px var(--color-aqua-400);
+  }
+}
+
+.demo-spotlight {
+  animation: demo-spotlight 1.6s ease-out 2;
+  border-radius: var(--radius-panel);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise-in,
-  .map-flow-line {
+  .map-flow-line,
+  .demo-spotlight {
     animation: none;
   }
 }

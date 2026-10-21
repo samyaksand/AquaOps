@@ -2,8 +2,10 @@ import { Map as MapIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { formatPercent, formatVolume } from '@/lib/format'
 import {
+  OBJECTIVE_EXPLANATIONS,
   OBJECTIVE_KEYS,
   OBJECTIVE_LABELS,
   type ObjectiveScores,
@@ -43,7 +45,7 @@ export function CandidateDetails({
             )}
           </div>
           <p className="mt-1 text-[11px] text-ink-subtle">
-            Weights — criticality {formatPercent(candidate.criticality_weight)} · population{' '}
+            Weights - criticality {formatPercent(candidate.criticality_weight)} · population{' '}
             {formatPercent(candidate.population_weight)} · efficiency{' '}
             {formatPercent(candidate.efficiency_weight)}
           </p>
@@ -61,8 +63,9 @@ export function CandidateDetails({
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-hairline bg-raised/40 p-3.5">
         {OBJECTIVE_KEYS.map((key) => (
           <div key={key} className="min-w-0">
-            <p className="text-[10px] leading-tight tracking-wide text-ink-subtle uppercase">
+            <p className="flex items-center gap-1 text-[10px] leading-tight tracking-wide text-ink-subtle uppercase">
               {OBJECTIVE_LABELS[key]}
+              <InfoTooltip>{OBJECTIVE_EXPLANATIONS[key]}</InfoTooltip>
             </p>
             <p className="tabular mt-0.5 text-lg font-semibold text-ink">
               {formatPercent(candidate.objectives[key])}

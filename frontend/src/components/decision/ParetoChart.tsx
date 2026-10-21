@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { Select } from '@/components/ui/Select'
 import { formatPercent } from '@/lib/format'
 import {
+  OBJECTIVE_EXPLANATIONS,
   OBJECTIVE_KEYS,
   OBJECTIVE_LABELS,
   type Candidate,
@@ -10,7 +12,13 @@ import {
 } from '@/types/network'
 
 const WIDTH = 640
-const HEIGHT = 420
+// Shorter than a "natural" square-ish chart would be: at common laptop
+// window heights (~700-800px after browser chrome), the page's other chrome
+// (toolbar, panel header, the "N distinct outcomes" note) already consumes
+// a few hundred px, and a taller chart pushed its own axis labels below the
+// fold with no visual cue that more was there. This ratio keeps the full
+// chart, including axis labels, visible without scrolling in that range.
+const HEIGHT = 260
 const PAD = { top: 20, right: 24, bottom: 48, left: 56 }
 const PLOT_W = WIDTH - PAD.left - PAD.right
 const PLOT_H = HEIGHT - PAD.top - PAD.bottom
@@ -75,16 +83,23 @@ export function ParetoChart({
   // (e.g. once every critical facility is already fully served, further
   // weight on criticality changes nothing). Group points that land on the
   // same pixel so one marker can show "+N" instead of silently hiding them
-  // under a single dot.
-  const clusterSizeByPoint = useMemo(() => {
-    const counts = new Map<string, number>()
+  // under a single dot. Candidates underneath the topmost one in a cluster
+  // are otherwise unreachable by click (SVG hit-testing only ever sees the
+  // element on top) — clusterMembersByPoint keeps the full list so the
+  // tooltip can list and individually select any of them, not just whoever
+  // happens to render last.
+  const clusterMembersByPoint = useMemo(() => {
+    const groups = new Map<string, typeof points>()
     for (const p of points) {
       const key = `${Math.round(p.x)},${Math.round(p.y)}`
-      counts.set(key, (counts.get(key) ?? 0) + 1)
+      const list = groups.get(key)
+      if (list) list.push(p)
+      else groups.set(key, [p])
     }
-    return (x: number, y: number) =>
-      counts.get(`${Math.round(x)},${Math.round(y)}`) ?? 1
+    return (x: number, y: number) => groups.get(`${Math.round(x)},${Math.round(y)}`) ?? []
   }, [points])
+  const clusterSizeByPoint = (x: number, y: number) =>
+    clusterMembersByPoint(x, y).length || 1
 
   const baselinePoint = baseline
     ? {
@@ -298,9 +313,12 @@ export function ParetoChart({
         {hovered ? (
           <ChartTooltip
             candidate={hovered.candidate}
+            clusterMembers={clusterMembersByPoint(hovered.x, hovered.y).map((p) => p.candidate)}
             x={hovered.x}
             y={hovered.y}
-            isFrontier={frontierIds.has(hovered.candidate.candidate_id)}
+            frontierIds={frontierIds}
+            selectedId={selectedId}
+            onSelectMember={onSelect}
             canCompare={
               !!onCompare &&
               selectedId !== null &&
@@ -330,6 +348,7 @@ function AxisPicker({
   return (
     <label className="flex items-center gap-1.5 text-[11px] text-ink-subtle">
       {label}
+      <InfoTooltip>{OBJECTIVE_EXPLANATIONS[value]}</InfoTooltip>
       <Select
         aria-label={label}
         className="w-44 py-1.5 text-xs"
@@ -367,28 +386,66 @@ function Legend() {
 
 function ChartTooltip({
   candidate,
+  clusterMembers,
   x,
   y,
-  isFrontier,
+  frontierIds,
+  selectedId,
+  onSelectMember,
   canCompare,
   onCompare,
 }: {
   candidate: Candidate
+  /** Every candidate sharing this point's pixel position — SVG only ever
+   * hit-tests the topmost circle, so without this list every candidate
+   * beneath it in a cluster would be permanently unreachable by click. */
+  clusterMembers: Candidate[]
   x: number
   y: number
-  isFrontier: boolean
+  frontierIds: Set<string>
+  selectedId: string | null
+  onSelectMember: (candidateId: string) => void
   canCompare: boolean
   onCompare: () => void
 }) {
   const leftPct = (x / WIDTH) * 100
   const topPct = (y / HEIGHT) * 100
+  const isFrontier = frontierIds.has(candidate.candidate_id)
+  const hasCluster = clusterMembers.length > 1
+
   return (
     <div
       role="tooltip"
-      className="absolute z-10 w-56 -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-lg border border-divider bg-depth/95 p-2.5 shadow-2xl backdrop-blur"
+      className="absolute z-10 w-60 -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-lg border border-divider bg-depth/95 p-2.5 shadow-2xl backdrop-blur"
       style={{ left: `${leftPct}%`, top: `${topPct}%` }}
     >
-      <div className="flex items-center justify-between gap-2">
+      {hasCluster ? (
+        <>
+          <p className="text-[11px] font-medium text-ink-muted">
+            {clusterMembers.length} candidates land here - same outcome, different weights
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {clusterMembers.map((member) => {
+              const isSelected = member.candidate_id === selectedId
+              return (
+                <button
+                  key={member.candidate_id}
+                  type="button"
+                  onClick={() => onSelectMember(member.candidate_id)}
+                  className={
+                    isSelected
+                      ? 'rounded-full bg-aqua-500/20 px-2 py-0.5 text-[10px] font-semibold text-aqua-300 ring-1 ring-aqua-400'
+                      : 'rounded-full bg-raised px-2 py-0.5 text-[10px] text-ink-muted ring-1 ring-divider transition-colors hover:text-ink'
+                  }
+                >
+                  {member.candidate_id.replace('candidate-', 'Opt ')}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      ) : null}
+      <div className="mt-1.5 flex items-center justify-between gap-2">
         <span className="text-xs font-semibold text-ink">
           {candidate.candidate_id.replace('candidate-', 'Option ')}
         </span>

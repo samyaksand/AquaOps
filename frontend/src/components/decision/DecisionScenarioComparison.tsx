@@ -1,4 +1,5 @@
-import { GitCompareArrows } from 'lucide-react'
+import { ChevronDown, GitCompareArrows } from 'lucide-react'
+import { useState } from 'react'
 
 import { formatPercent } from '@/lib/format'
 import {
@@ -16,25 +17,40 @@ interface DecisionScenarioComparisonProps {
  * How the feasible decision space itself changes after a disruption: not
  * one allocation's numbers, but the frontier's shape — how many candidates
  * remain non-dominated, and where the best achievable value on each
- * objective moved. Kept to one compact row per the task's "visually simple"
- * ask.
+ * objective moved. Collapsed by default: the Pareto chart below is this
+ * page's actual centerpiece, and on common laptop window heights this
+ * section's own height was enough to push the chart below the fold with
+ * nothing visible to tell a viewer there was more below — collapsing it
+ * here, not the chart, keeps the chart on-screen.
  */
 export function DecisionScenarioComparison({
   normal,
   scenario,
 }: DecisionScenarioComparisonProps) {
+  const [expanded, setExpanded] = useState(false)
   const normalBestByObjective = bestPerObjective(normal)
   const scenarioBestByObjective = bestPerObjective(scenario)
 
   return (
     <div className="rounded-panel border border-status-warn/30 bg-surface">
-      <div className="flex items-center gap-2 border-b border-hairline px-4 py-2.5">
-        <GitCompareArrows className="size-4 text-status-warn" aria-hidden="true" />
-        <h2 className="text-sm font-semibold text-ink">
-          Decision space: Normal vs Scenario
-        </h2>
-      </div>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3 px-4 py-3 sm:grid-cols-3 lg:grid-cols-6">
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="flex w-full items-center justify-between gap-2 px-4 py-2.5"
+      >
+        <span className="flex items-center gap-2">
+          <GitCompareArrows className="size-4 text-status-warn" aria-hidden="true" />
+          <h2 className="text-sm font-semibold text-ink">
+            Decision space: Normal vs Scenario
+          </h2>
+        </span>
+        <ChevronDown
+          className={expanded ? 'size-4 rotate-180 text-ink-subtle transition-transform' : 'size-4 text-ink-subtle transition-transform'}
+          aria-hidden="true"
+        />
+      </button>
+      {expanded ? (
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 border-t border-hairline px-4 py-3 sm:grid-cols-3 lg:grid-cols-6">
         <Metric
           label="Pareto-optimal options"
           normal={String(normal.frontier_candidate_ids.length)}
@@ -54,6 +70,7 @@ export function DecisionScenarioComparison({
           />
         ))}
       </div>
+      ) : null}
     </div>
   )
 }

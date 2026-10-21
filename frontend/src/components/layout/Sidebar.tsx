@@ -149,7 +149,7 @@ export function Sidebar() {
           <>
             <DemoLaunchButton />
             <AboutAquaOps />
-            <p className="px-2 py-1 text-[10px] leading-relaxed text-ink-subtle">
+            <p className="rounded-lg border border-hairline bg-raised/40 px-2 py-1.5 text-[10px] leading-relaxed text-ink-subtle">
               Simulated decision support. Not connected to live infrastructure.
             </p>
           </>

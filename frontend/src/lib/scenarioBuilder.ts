@@ -59,21 +59,21 @@ export function targetsFor(
         .sort((a, b) => b.available_m3_per_day - a.available_m3_per_day)
         .map((s) => ({
           value: s.code,
-          label: `${s.name} — ${formatCompact(s.available_m3_per_day)} m³/d`,
+          label: `${s.name} - ${formatCompact(s.available_m3_per_day)} m³/d`,
         }))
     case 'transit':
       return [...network.transits]
         .sort((a, b) => b.capacity_m3_per_day - a.capacity_m3_per_day)
         .map((t) => ({
           value: t.code,
-          label: `${t.name} — ${formatCompact(t.capacity_m3_per_day)} m³/d`,
+          label: `${t.name} - ${formatCompact(t.capacity_m3_per_day)} m³/d`,
         }))
     case 'link':
       return [...network.links]
         .sort((a, b) => b.capacity_m3_per_day - a.capacity_m3_per_day)
         .map((l) => ({
           value: l.code,
-          label: `${linkLabel(names, l.source_code, l.target_code)} — ${formatCompact(l.capacity_m3_per_day)} m³/d`,
+          label: `${linkLabel(names, l.source_code, l.target_code)} - ${formatCompact(l.capacity_m3_per_day)} m³/d`,
         }))
     case 'zone':
       return [...network.demands]
@@ -81,7 +81,7 @@ export function targetsFor(
         .sort((a, b) => b.demand_m3_per_day - a.demand_m3_per_day)
         .map((d) => ({
           value: d.code,
-          label: `${d.name} — ${formatCompact(d.demand_m3_per_day)} m³/d`,
+          label: `${d.name} - ${formatCompact(d.demand_m3_per_day)} m³/d`,
         }))
     case 'facility':
       return [...network.demands]
@@ -93,7 +93,7 @@ export function targetsFor(
         )
         .map((d) => ({
           value: d.code,
-          label: `${d.name} — ${PRIORITY_LABELS[d.priority_rank] ?? 'Unranked'}`,
+          label: `${d.name} - ${PRIORITY_LABELS[d.priority_rank] ?? 'Unranked'}`,
         }))
     case 'tanker':
       return network.tankers.map((t) => ({ value: t.code, label: t.name }))

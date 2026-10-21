@@ -26,7 +26,12 @@ import { ScenarioBuilderStep } from './ScenarioBuilderStep'
 import { ScenarioComparison } from './ScenarioComparison'
 import { ScenarioImpactCard } from './ScenarioImpactCard'
 import { ScenarioLibrary } from './ScenarioLibrary'
-import { ScenarioMapOverlay, ScenarioMapTrigger } from './ScenarioMapOverlay'
+import { ScenarioMapOverlay } from './ScenarioMapOverlay'
+
+// The full-viewport map overlay's whole point is to show the entire
+// updated network, not a dimmed diff focused on just the changed assets,
+// so it's always passed an empty highlight set.
+const EMPTY_HIGHLIGHT = new Set<string>()
 
 interface ScenarioLabViewProps {
   network: NetworkState | null
@@ -64,18 +69,16 @@ export function ScenarioLabView({
   const removeChange = useScenarioStore((state) => state.removeChange)
   const scenarioNetwork = useScenarioStore((state) => state.network)
   const scenarioMode = useScenarioStore((state) => state.mode)
+  const allocatedDrafts = useScenarioStore((state) => state.allocatedDrafts)
 
   const {
     mode,
     name: scenarioName,
     setName: setScenarioName,
     allocation,
-    applying,
-    applyError,
     reallocating,
     reallocateError,
     history,
-    apply,
     reallocate,
     reset,
   } = useScenario()
@@ -94,11 +97,6 @@ export function ScenarioLabView({
     addChange(defaultChange(type, target.value))
   }
 
-  const highlightCodes = useMemo(
-    () => new Set(drafts.map((d) => d.change.target_code)),
-    [drafts],
-  )
-
   const changeSummary = useMemo(
     () =>
       drafts.length > 0
@@ -106,6 +104,18 @@ export function ScenarioLabView({
         : null,
     [drafts, names],
   )
+
+  // Compares live drafts against the snapshot taken at the last successful
+  // Reallocate — only the `change` payload matters (not the draft's local
+  // `id`, which is irrelevant to what was actually sent to the backend).
+  const configChangedSinceRun = useMemo(() => {
+    if (allocatedDrafts === null) return false
+    if (drafts.length !== allocatedDrafts.length) return true
+    return drafts.some(
+      (d, i) =>
+        JSON.stringify(d.change) !== JSON.stringify(allocatedDrafts[i]?.change),
+    )
+  }, [drafts, allocatedDrafts])
 
   const showingScenario = scenarioMode === 'scenario'
   const displayedNetwork = showingScenario ? scenarioNetwork ?? network : network
@@ -118,10 +128,10 @@ export function ScenarioLabView({
       <ParetoTeaser onOpen={onOpenDecisionAnalysis} active={showingScenario} />
 
       <div className="space-y-3">
-        <Panel>
+        <Panel id="demo-choose-scenario">
           <PanelHeader
             title="Choose a scenario"
-            subtitle="Pick a disruption to explore — every type stays selectable"
+            subtitle="Pick a disruption to explore - every type stays selectable"
             icon={<FlaskConical className="size-4" />}
           />
           <PanelBody>
@@ -140,10 +150,10 @@ export function ScenarioLabView({
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
             >
-              <Panel>
+              <Panel id="demo-configure-run">
                 <PanelHeader
                   title="Name, configure & run"
-                  subtitle="Name the scenario, tune each change, then apply or reallocate"
+                  subtitle="Name the scenario, tune each change, then reallocate"
                   icon={<Pencil className="size-4" />}
                 />
                 <PanelBody>
@@ -157,12 +167,12 @@ export function ScenarioLabView({
                     onStrategyChange={setStrategy}
                     onChangeDraft={updateChange}
                     onRemoveDraft={removeChange}
-                    applying={applying}
-                    applyError={applyError}
                     reallocating={reallocating}
                     reallocateError={reallocateError}
-                    onApply={() => void apply()}
                     onReallocate={() => void reallocate(strategy)}
+                    configChangedSinceRun={configChangedSinceRun}
+                    onOpenMap={() => setMapOpen(true)}
+                    hasReallocated={allocation !== null}
                   />
                 </PanelBody>
               </Panel>
@@ -170,7 +180,7 @@ export function ScenarioLabView({
           ) : null}
         </AnimatePresence>
 
-        <Panel>
+        <Panel id="demo-scenario-impact">
           <PanelHeader
             title="Scenario impact"
             subtitle="What changed, compared to the normal network"
@@ -186,9 +196,7 @@ export function ScenarioLabView({
           </PanelBody>
         </Panel>
 
-        <ScenarioMapTrigger onOpen={() => setMapOpen(true)} />
-
-        <Panel>
+        <Panel id="demo-compare-scenarios">
           <PanelHeader
             title="Compare scenarios"
             subtitle="See what's different between two runs you've tried"
@@ -209,7 +217,7 @@ export function ScenarioLabView({
         onRetry={onRetry}
         allocation={displayedAllocation}
         showingScenario={showingScenario}
-        highlightCodes={highlightCodes}
+        highlightCodes={EMPTY_HIGHLIGHT}
         scenarioName={scenarioName}
         changeSummary={changeSummary}
       />
@@ -274,7 +282,7 @@ function ParetoTeaser({
           </p>
           <p className="hidden text-[11px] text-ink-subtle sm:block">
             Improving one outcome (like coverage) can cost another (like
-            efficiency) —{' '}
+            efficiency) -{' '}
             {active
               ? 'see the options for this scenario'
               : 'see the options for the normal network'}

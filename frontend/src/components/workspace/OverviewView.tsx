@@ -47,7 +47,7 @@ export function OverviewView({
           error={error}
           onRetry={onRetry}
           allocation={allocation}
-          mapOverlay={<IntroOverlay />}
+          mapOverlay={<IntroOverlay network={network} />}
         />
       </div>
 
@@ -57,7 +57,7 @@ export function OverviewView({
         onSelect={(code) => setViewAndSelect('network', code)}
       />
 
-      <MetricsBar network={network} />
+      <MetricsBar network={network} allocation={allocation} />
     </div>
   )
 }

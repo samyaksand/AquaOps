@@ -82,7 +82,16 @@ export function Header({
         </p>
       </div>
 
-      <div className="hidden items-center gap-2 lg:flex">
+      <div
+        className={clsx(
+          'hidden items-center gap-2 lg:flex',
+          // A first-time visitor on Overview hasn't run an allocation yet —
+          // the strategy picker has nothing to act on and is just one more
+          // control competing for attention before the basics land. It stays
+          // fully available on every other view, where it's load-bearing.
+          view === 'overview' && 'lg:hidden',
+        )}
+      >
         <label
           htmlFor="strategy"
           className="text-[11px] font-medium tracking-wide text-ink-subtle uppercase"
@@ -122,10 +131,10 @@ function RealtimeIndicator({ status }: { status: RealtimeStatus }) {
     return (
       <span
         className="flex items-center gap-1 text-status-ok"
-        title="Live updates connected"
+        title="Real-time connection to this app's own server is active - this reflects application connectivity, not live water infrastructure"
       >
         <Zap className="size-3.5" aria-hidden="true" />
-        <span className="hidden text-[11px] lg:inline">Live updates</span>
+        <span className="hidden text-[11px] lg:inline">App updates live</span>
       </span>
     )
   }
@@ -133,7 +142,7 @@ function RealtimeIndicator({ status }: { status: RealtimeStatus }) {
     return (
       <span
         className="flex items-center gap-1 text-ink-subtle"
-        title="Connecting to live updates"
+        title="Connecting to this app's real-time channel"
       >
         <Spinner className="size-3" />
       </span>
@@ -142,7 +151,7 @@ function RealtimeIndicator({ status }: { status: RealtimeStatus }) {
   return (
     <span
       className="flex items-center gap-1 text-ink-subtle"
-      title="Live updates disconnected — reconnecting"
+      title="Real-time connection to this app's server is disconnected - reconnecting"
     >
       <ZapOff className="size-3.5" aria-hidden="true" />
     </span>
@@ -173,10 +182,12 @@ function ApiStatus({
     )
   }
   return (
-    <Badge tone="ok">
-      <Dot tone="ok" />
-      <Activity className="size-3" aria-hidden="true" />
-      Live
-    </Badge>
+    <span title="This app's backend API is reachable - a simulated network, not live infrastructure">
+      <Badge tone="ok">
+        <Dot tone="ok" />
+        <Activity className="size-3" aria-hidden="true" />
+        API connected
+      </Badge>
+    </span>
   )
 }

@@ -7,6 +7,7 @@ import {
   PlayCircle,
   SlidersHorizontal,
 } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -38,11 +39,26 @@ export function DecisionPanel({ network }: { network: NetworkState | null }) {
   const strategy = useAppStore((state) => state.strategy)
   const setStrategy = useAppStore((state) => state.setStrategy)
   const { allocation, error, loading, allocate } = useAllocation()
+  const asideRef = useRef<HTMLElement>(null)
+
+  // Finishing an allocation inserts a new result card above "Demand
+  // Priorities", pushing it further down without changing the panel's own
+  // scroll position — if the panel happened to be scrolled part-way down
+  // already (e.g. from an earlier "scroll to this button" demo step),
+  // Demand Priorities visually vanishes below the fold at the exact moment
+  // the result appears, reading as the whole panel suddenly shrinking.
+  // Scrolling back to the top whenever a result arrives keeps the panel's
+  // content predictable: strategy picker, then result, then priorities,
+  // always in that order from the top.
+  useEffect(() => {
+    if (allocation) asideRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [allocation])
 
   return (
     <aside
+      ref={asideRef}
       aria-label="Decision panel"
-      className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto"
+      className="flex min-w-0 flex-1 flex-col gap-5 overflow-y-auto"
     >
       <Panel>
         <PanelHeader
@@ -50,7 +66,7 @@ export function DecisionPanel({ network }: { network: NetworkState | null }) {
           subtitle="Choose whose needs come first"
           icon={<SlidersHorizontal className="size-4" />}
         />
-        <PanelBody className="space-y-3">
+        <PanelBody className="space-y-4">
           <Select
             aria-label="Allocation strategy"
             value={strategy}
@@ -60,10 +76,11 @@ export function DecisionPanel({ network }: { network: NetworkState | null }) {
             }
           />
           <p className="text-xs leading-relaxed text-ink-subtle">
-            Strategies trade off differently. No single one is optimal — the
+            Strategies trade off differently. No single one is optimal - the
             comparison is the point.
           </p>
           <Button
+            id="demo-run-allocation"
             variant="primary"
             className="w-full"
             disabled={!network || loading}
@@ -144,7 +161,7 @@ export function DecisionPanel({ network }: { network: NetworkState | null }) {
         </PanelBody>
       </Panel>
 
-      <Panel className="flex min-h-0 flex-col">
+      <Panel id="demo-demand-priorities" className="flex min-h-0 flex-col">
         <PanelHeader
           title="Demand Priorities"
           subtitle={
@@ -211,7 +228,7 @@ function DemandRow({
         onClick={() => select(isSelected ? null : point.code)}
         aria-pressed={isSelected}
         className={clsx(
-          'w-full px-4 py-3 text-left transition-colors',
+          'w-full px-4 py-4 text-left transition-colors',
           isSelected ? 'bg-raised' : 'hover:bg-raised/50',
         )}
       >
