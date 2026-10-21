@@ -1,5 +1,6 @@
 import { clsx } from 'clsx'
 import { Eye, PanelRightClose, PanelRightOpen, X } from 'lucide-react'
+import { useEffect } from 'react'
 
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
@@ -58,6 +59,17 @@ export function AppShell() {
   const inOverviewView = view === 'overview'
   const inScenarioView = view === 'scenarios'
   const inDecisionView = view === 'decision'
+  const inStrategiesView = view === 'strategies'
+
+  // Strategies otherwise renders identically to Network at rest (same map,
+  // same shell) — open the Controls panel automatically on arrival so the
+  // two destinations are visibly different without duplicating the layout,
+  // and close it again on the way out so Network isn't left with it open.
+  useEffect(() => {
+    if (inStrategiesView && sidePanelCollapsed) toggleSidePanel()
+    if (!inStrategiesView && view === 'network' && !sidePanelCollapsed) toggleSidePanel()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inStrategiesView, view])
   const showingInspected = !inScenarioView && inspectedAllocation !== null
 
   const displayedNetwork = network

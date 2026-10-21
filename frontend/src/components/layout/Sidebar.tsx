@@ -38,14 +38,27 @@ export function Sidebar() {
   const toggle = useAppStore((state) => state.toggleSidebar)
 
   return (
-    <nav
-      aria-label="Primary"
-      className={clsx(
-        'flex shrink-0 flex-col border-r border-hairline bg-depth',
-        'transition-[width] duration-200',
-        collapsed ? 'w-[4.25rem]' : 'w-56',
-      )}
-    >
+    <>
+      {/* Below md, the sidebar is an off-canvas overlay rather than a
+          permanent column — `collapsed` doubles as "closed" at that size.
+          A backdrop closes it on outside tap; it never affects md+ layout. */}
+      {!collapsed ? (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={toggle}
+          className="fixed inset-0 z-30 bg-abyss/50 backdrop-blur-[1px] md:hidden"
+        />
+      ) : null}
+      <nav
+        aria-label="Primary"
+        className={clsx(
+          'flex shrink-0 flex-col border-r border-hairline bg-depth',
+          'fixed inset-y-0 left-0 z-40 transition-transform duration-200 md:static md:translate-x-0 md:transition-[width]',
+          collapsed ? '-translate-x-full md:translate-x-0' : 'translate-x-0',
+          collapsed ? 'w-56 md:w-[4.25rem]' : 'w-56',
+        )}
+      >
       <div
         className={clsx(
           'flex h-14 items-center border-b border-hairline',
@@ -85,7 +98,12 @@ export function Sidebar() {
             <li key={item.id}>
               <button
                 type="button"
-                onClick={() => setView(item.id)}
+                onClick={() => {
+                  setView(item.id)
+                  // Below md the sidebar is an overlay drawer — picking a
+                  // destination should close it, same as tapping the backdrop.
+                  if (!collapsed && window.innerWidth < 768) toggle()
+                }}
                 aria-current={active ? 'page' : undefined}
                 title={collapsed ? item.label : undefined}
                 className={clsx(
@@ -137,7 +155,8 @@ export function Sidebar() {
           </>
         )}
       </div>
-    </nav>
+      </nav>
+    </>
   )
 }
 

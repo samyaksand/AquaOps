@@ -56,8 +56,8 @@ export function ParetoChart({
   onCompare,
   baseline,
 }: ParetoChartProps) {
-  const [xKey, setXKey] = useState<keyof ObjectiveScores>('unmet_demand_score')
-  const [yKey, setYKey] = useState<keyof ObjectiveScores>('critical_coverage')
+  const [xKey, setXKey] = useState<keyof ObjectiveScores>('logistics_efficiency')
+  const [yKey, setYKey] = useState<keyof ObjectiveScores>('equity')
   const [hoverId, setHoverId] = useState<string | null>(null)
 
   const points = useMemo(

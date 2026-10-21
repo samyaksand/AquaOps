@@ -53,7 +53,11 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   view: 'overview',
   strategy: 'balanced',
-  sidebarCollapsed: false,
+  // Below md the sidebar is an off-canvas drawer and `collapsed` doubles as
+  // "closed" — default it shut there so a fresh mobile load doesn't open
+  // directly into a full-screen nav overlay. At md+ it's the normal expanded
+  // rail. `window` is always defined here (no SSR in this app).
+  sidebarCollapsed: window.innerWidth < 768,
   sidePanelCollapsed: true,
   selectedNodeCode: null,
 

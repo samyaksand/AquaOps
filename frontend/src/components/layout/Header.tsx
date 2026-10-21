@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { Activity, CircleSlash, RefreshCw, Zap, ZapOff } from 'lucide-react'
+import { Activity, CircleSlash, Menu, RefreshCw, Zap, ZapOff } from 'lucide-react'
 
 import { Badge, Dot } from '@/components/ui/Badge'
 import { IconButton } from '@/components/ui/Button'
@@ -57,14 +57,25 @@ export function Header({
   const view = useAppStore((state) => state.view)
   const strategy = useAppStore((state) => state.strategy)
   const setStrategy = useAppStore((state) => state.setStrategy)
+  const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed)
+  const toggleSidebar = useAppStore((state) => state.toggleSidebar)
   const { title, subtitle } = TITLES[view]
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-hairline bg-depth px-4">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-hairline bg-depth px-3 sm:gap-4 sm:px-4">
+      <IconButton
+        label={sidebarCollapsed ? 'Open navigation' : 'Close navigation'}
+        onClick={toggleSidebar}
+        className="md:hidden"
+      >
+        <Menu className="size-4" />
+      </IconButton>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h1 className="truncate text-sm font-semibold text-ink">{title}</h1>
-          <Badge tone="info">Baseline</Badge>
+          <Badge tone="info" className="hidden sm:inline-flex">
+            Baseline
+          </Badge>
         </div>
         <p className="hidden truncate text-xs text-ink-subtle sm:block">
           {subtitle}
