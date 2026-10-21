@@ -281,7 +281,9 @@ Production is configured via `backend/.env.production` and `frontend/.env.produc
 |---|---|---|
 | **Local Docker Compose** | Postgres/PostGIS, Redis, Kafka | Working local development environment |
 | **Kubernetes / Helm** | Backend, worker, frontend, plus Prometheus/Grafana observability | Raw manifests and a Helm chart exist as an alternative cluster path |
-| **Production Docker Compose (OVHcloud)** | Frontend, backend, worker, Redis, Kafka on a single VPS; Supabase as the database; Cloudflare for DNS/TLS | Scripted (`scripts/deploy-production.sh`) and documented, not currently running |
+| **Production Docker Compose (OVHcloud)** | Frontend, backend, worker, Redis on a single VPS; Supabase as the database; Cloudflare for DNS/TLS | Scripted (`scripts/deploy-production.sh`) and documented, not currently running |
+
+Kafka remains fully implemented in the codebase and still runs in local development and the Kubernetes/Helm path. The lightweight production Compose deploy above runs with `KAFKA_ENABLED=false` and no `kafka` service, to keep the VPS footprint small — the backend already treats Kafka as best-effort infrastructure, so this only disables the secondary event-relay pipeline (cross-process WebSocket fanout), never core allocation, scenario, or decision-analysis functionality.
 
 ## Validation
 

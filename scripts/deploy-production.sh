@@ -116,9 +116,19 @@ log "Verifying Redis health"
 REDIS_STATUS="$(compose ps --format '{{.Name}} {{.Health}}' 2>/dev/null | awk '$1=="aquaops-redis"{print $2}')"
 [[ "${REDIS_STATUS}" == "healthy" ]] || die "Redis is not healthy (status: ${REDIS_STATUS:-unknown})"
 
-log "Verifying Kafka health"
-KAFKA_STATUS="$(compose ps --format '{{.Name}} {{.Health}}' 2>/dev/null | awk '$1=="aquaops-kafka"{print $2}')"
-[[ "${KAFKA_STATUS}" == "healthy" ]] || die "Kafka is not healthy (status: ${KAFKA_STATUS:-unknown})"
+log "Verifying Kafka health (if present)"
+# The lightweight production Compose file has no `kafka` service at all
+# (KAFKA_ENABLED=false — see CLAUDE.md "Events & Cache"); only check its
+# health when the service is actually defined, so a Kafka-less deploy never
+# fails here. If a `kafka` service has been added back to the Compose file
+# for a fuller deployment, its health is still verified as before.
+if compose config --services | grep -qx "kafka"; then
+  KAFKA_STATUS="$(compose ps --format '{{.Name}} {{.Health}}' 2>/dev/null | awk '$1=="aquaops-kafka"{print $2}')"
+  [[ "${KAFKA_STATUS}" == "healthy" ]] || die "Kafka is not healthy (status: ${KAFKA_STATUS:-unknown})"
+else
+  KAFKA_STATUS="not deployed (KAFKA_ENABLED=false)"
+  log "Kafka service not present in this Compose file — skipping"
+fi
 
 log "Verifying worker is running"
 WORKER_STATE="$(compose ps --format '{{.Name}} {{.State}}' 2>/dev/null | awk '$1=="aquaops-worker"{print $2}')"

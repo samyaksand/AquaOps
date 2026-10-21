@@ -1,11 +1,24 @@
-# AquaOps — production Docker Compose.
+# AquaOps — production Docker Compose (lightweight deploy).
 #
-# Runs on a single small VPS (sized for 2 vCPU / 4 GB RAM). PostgreSQL/PostGIS
-# is NOT run here — Supabase is the production database, reached over
-# DATABASE_URL like any other Postgres. Redis and Kafka still run on the VM:
-# both are best-effort infrastructure the backend already degrades without
-# (see backend/app/core/config.py / CLAUDE.md "Events & Cache"), so there is
-# no managed-service dependency to introduce for them.
+# Runs on a single small VPS. PostgreSQL/PostGIS is NOT run here — Supabase
+# is the production database, reached over DATABASE_URL like any other
+# Postgres. Redis still runs on the VM: it is best-effort infrastructure the
+# backend already degrades without (see backend/app/core/config.py /
+# CLAUDE.md "Events & Cache"), so there is no managed-service dependency to
+# introduce for it.
+#
+# Kafka is deliberately NOT started here. It stays fully implemented in the
+# codebase (app/events/, app/worker.py) and still runs in local dev
+# (infrastructure/docker/docker-compose.yml) and the Kubernetes/Helm path —
+# this is only a smaller, cheaper footprint for a lightweight/portfolio VPS
+# deploy. Pair this with KAFKA_ENABLED=false in backend/.env.production: the
+# backend already treats Kafka as best-effort (it degrades to "no live
+# relay" instead of failing a request — see CLAUDE.md "Events & Cache"), and
+# the worker idles cleanly instead of connecting when Kafka is disabled (see
+# app/worker.py). To restore the full event-relay pipeline on this same
+# Compose file, add the `kafka` service back (see docker-compose.yml for a
+# working definition), add it to `backend`/`worker`'s `depends_on`, and set
+# KAFKA_ENABLED=true.
 #
 # All credentials/URLs come from an external env file passed with --env-file
 # (see infrastructure/docker/PRODUCTION.md) — nothing here is hardcoded.
@@ -34,37 +47,6 @@ services:
           cpus: "0.25"
           memory: 192M
 
-  kafka:
-    image: apache/kafka:3.8.0
-    container_name: aquaops-kafka
-    restart: unless-stopped
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:19092,CONTROLLER://0.0.0.0:19093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:19092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:19093
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      # No EXTERNAL listener: unlike the dev compose, nothing outside this
-      # network ever needs to reach Kafka directly in production.
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:19092"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    networks:
-      - aquaops
-    deploy:
-      resources:
-        limits:
-          cpus: "0.75"
-          memory: 1024M
-
   backend:
     build:
       context: ../../backend
@@ -77,8 +59,6 @@ services:
       - ../../backend/.env.production
     depends_on:
       redis:
-        condition: service_healthy
-      kafka:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\" || exit 1"]
@@ -106,8 +86,6 @@ services:
       - ../../backend/.env.production
     depends_on:
       redis:
-        condition: service_healthy
-      kafka:
         condition: service_healthy
     # No HTTP surface to probe (see infrastructure/kubernetes/worker.yaml) —
     # restart: unless-stopped plus Docker's own process liveness covers it.

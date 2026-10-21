@@ -18,6 +18,7 @@ from prometheus_client import start_http_server
 
 from app.cache.redis_client import close_redis
 from app.cache.state_cache import get_state_cache
+from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.events.consumer import EventConsumer
 from app.events.topics import Topic
@@ -40,6 +41,17 @@ async def run() -> None:
     configure_logging()
     start_http_server(METRICS_PORT)
     logger.info("metrics exposed on :%d/metrics", METRICS_PORT)
+
+    if not get_settings().kafka_enabled:
+        # Kafka is deliberately off in the lightweight production deploy
+        # (see CLAUDE.md "Events & Cache"). There is nothing to relay
+        # without it, so the worker idles rather than connecting — it stays
+        # up for Docker/Kubernetes liveness and its own /metrics endpoint,
+        # but never touches Kafka. Re-enabling KAFKA_ENABLED restores full
+        # relay behavior with no other change needed.
+        logger.info("KAFKA_ENABLED=false — worker idling, no Kafka relay")
+        await asyncio.Event().wait()
+        return
 
     consumer = EventConsumer(CONSUMED_TOPICS, group_id="aquaops-state-worker")
     cache = get_state_cache()
